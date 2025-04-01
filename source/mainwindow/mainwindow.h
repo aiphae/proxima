@@ -9,15 +9,28 @@ class MainWindow;
 }
 QT_END_NAMESPACE
 
-class MainWindow : public QMainWindow
-{
+enum class Pages {
+    Home = 0,
+    Align = 1,
+    Stack = 2,
+    Process = 3
+};
+
+class MainWindow : public QMainWindow {
     Q_OBJECT
 
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
+public slots:
+    void updateCurrentPage(int pageIndex);
+
 private:
     Ui::MainWindow *ui;
+
+    void initializePages();
+    void connectButtons();
 };
+
 #endif // MAINWINDOW_H
