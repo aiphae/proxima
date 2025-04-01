@@ -210,8 +210,8 @@ void AlignPage::process() {
         }
     }
 
-    auto writeFrame = [](bool joinMode, cv::VideoWriter &video, std::string filename, cv::Mat &frame) {
-        if (joinMode) {
+    auto writeFrame = [](bool toVideo, cv::VideoWriter &video, std::string filename, cv::Mat &frame) {
+        if (toVideo) {
             video.write(frame);
         }
         else {
@@ -232,6 +232,7 @@ void AlignPage::process() {
                                          true); // Keep color
             }
         }
+
         for (int i = 0; i < media.frames(); ++i) {
             // Update UI
             ui->currentProcessingEdit->setText(QString::number(counter++) + '/' + QString::number(totalFrames));
