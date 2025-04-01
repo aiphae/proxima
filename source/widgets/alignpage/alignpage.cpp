@@ -4,14 +4,22 @@
 #include <QMessageBox>
 #include <opencv2/opencv.hpp>
 
+// Some constants for clarity
+namespace {
+    const double DEFAULT_OUTPUT_FPS = 30.0;
+    const int CODEC_UNCOMPRESSED = 0;
+    const double MIN_OBJECT_SIZE_FACTOR = 0.95;
+
+    const cv::Scalar COLOR_GREEN(0, 255, 0);
+    const cv::Scalar COLOR_BLUE(0, 0, 255);
+}
+
 AlignPage::AlignPage(QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::AlignPage)
 {
     ui->setupUi(this);
-
     display = std::make_unique<Display>(ui->imageDisplay);
-
     connectUI();
 }
 
@@ -24,20 +32,19 @@ void AlignPage::on_openFilesPushButton_clicked() {
     if (files.isEmpty()) {
         return;
     }
-    selectedFiles = files;
 
+    selectedFiles = files;
     totalFrames = processingConfig.cropWidth = processingConfig.cropHeight = 0;
     mediaFiles.clear();
 
     for (const QString &file : files) {
-        MediaFile media(file);
-        if (!media.isValid()) continue;
-        mediaFiles.push_back(media);
-        totalFrames += mediaFiles.back().frames();
+        if (MediaFile media(file); media.isValid()) {
+            mediaFiles.emplace_back(std::move(media));
+            totalFrames += mediaFiles.back().frames();
+        }
     }
 
     ui->totalFramesEdit->setText(QString::number(totalFrames));
-
     ui->frameSlider->setMinimum(0);
     ui->frameSlider->setMaximum(totalFrames);
     ui->frameSlider->setValue(0);
@@ -50,19 +57,25 @@ void AlignPage::displayFrame(const int frameNumber) {
         return;
     }
 
-    int currentFrame = 0;
-    // Iterate through media files to find which one contains the requested frame
-    for (auto &media : mediaFiles) {
-        if (frameNumber < currentFrame + media.frames()) {
-            int localFrame = frameNumber - currentFrame;
-            cv::Mat frame = media.matAtFrame(localFrame);
-            if (!frame.empty()) {
-                display->show(previewProcessing(frame));
-            }
-            return;
-        }
-        currentFrame += media.frames();
+    auto [mediaIndex, localFrame] = findMediaFrame(frameNumber);
+    if (mediaIndex >= mediaFiles.size()) {
+        return;
     }
+
+    if (cv::Mat frame = mediaFiles[mediaIndex].matAtFrame(localFrame); !frame.empty()) {
+        display->show(previewProcessing(frame));
+    }
+}
+
+std::tuple<int, int> AlignPage::findMediaFrame(const int frameNumber) {
+    int currentFrame = 0;
+    for (int i = 0; i < mediaFiles.size(); ++i) {
+        if (frameNumber < currentFrame + mediaFiles[i].frames()) {
+            return {i, frameNumber - currentFrame};
+        }
+        currentFrame += mediaFiles[i].frames();
+    }
+    return {mediaFiles.size(), 0};
 }
 
 cv::Mat AlignPage::previewProcessing(cv::Mat &frame) {
@@ -77,33 +90,36 @@ cv::Mat AlignPage::previewProcessing(cv::Mat &frame) {
 }
 
 void AlignPage::previewCrop(const cv::Mat &frame) {
-    if (currentObject.x && currentObject.y) {
-        cv::rectangle(frame, currentCrop, cv::Scalar(0, 255, 0));
-
-        cv::Point cropTextPos(currentCrop.x, currentCrop.y - 5);
-        cv::putText(frame, "Crop", cropTextPos, cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0));
-
-        cv::Point cropCenter(currentObject.x + currentObject.width / 2, currentObject.y + currentObject.height / 2);
-        cv::drawMarker(frame, cropCenter, cv::Scalar(0, 255, 0), cv::MARKER_CROSS, 15, 1);
+    if (currentObject.x <= 0 || currentObject.y <= 0) {
+        return;
     }
+
+    cv::rectangle(frame, currentCrop, COLOR_GREEN);
+
+    cv::Point cropTextPos(currentCrop.x, currentCrop.y - 5);
+    cv::putText(frame, "Crop", cropTextPos, cv::FONT_HERSHEY_SIMPLEX, 0.5, COLOR_GREEN);
+
+    cv::Point cropCenter(currentObject.x + currentObject.width / 2, currentObject.y + currentObject.height / 2);
+    cv::drawMarker(frame, cropCenter, COLOR_GREEN, cv::MARKER_CROSS, 15, 1);
 }
 
 void AlignPage::previewObject(const cv::Mat &frame) {
-    if (currentObject.x && currentObject.y) {
-        cv::rectangle(frame, currentObject, cv::Scalar(0, 0, 255));
-
-        cv::Point objectTextPos(currentObject.x, currentObject.y - 5);
-        cv::putText(frame, "Object", objectTextPos, cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 255));
-
-        cv::Point objectCenter(currentObject.x + currentObject.width / 2, currentObject.y + currentObject.height / 2);
-        cv::drawMarker(frame, objectCenter, cv::Scalar(0, 0, 255), cv::MARKER_CROSS, 10, 1);
+    if (currentObject.x <= 0 || currentObject.y <= 0) {
+        return;
     }
+
+    cv::rectangle(frame, currentObject, COLOR_BLUE);
+
+    cv::Point objectTextPos(currentObject.x, currentObject.y - 5);
+    cv::putText(frame, "Object", objectTextPos, cv::FONT_HERSHEY_SIMPLEX, 0.5, COLOR_BLUE);
+
+    cv::Point objectCenter(currentObject.x + currentObject.width / 2, currentObject.y + currentObject.height / 2);
+    cv::drawMarker(frame, objectCenter, COLOR_BLUE, cv::MARKER_CROSS, 10, 1);
 }
 
 cv::Mat AlignPage::processFrame(cv::Mat &frame) {
     cv::Mat processedFrame = frame.clone();
 
-    // Convert to monochrome and then back to keep the image 3-channel
     if (processingConfig.toMonochrome) {
         cv::cvtColor(processedFrame, processedFrame, cv::COLOR_BGR2GRAY);
         cv::cvtColor(processedFrame, processedFrame, cv::COLOR_GRAY2BGR);
@@ -126,28 +142,27 @@ cv::Mat AlignPage::processFrame(cv::Mat &frame) {
 }
 
 cv::Rect AlignPage::getCrop(const cv::Mat &frame, const cv::Rect &object) {
-    // Make a cropping rectangle around 'object'
     cv::Point center = (object.br() + object.tl()) / 2;
     cv::Point tl(center.x - processingConfig.cropWidth / 2, center.y - processingConfig.cropHeight / 2);
     cv::Point br(center.x + processingConfig.cropWidth / 2, center.y + processingConfig.cropHeight / 2);
-    cv::Rect crop(tl, br);
-    return crop;
+    return cv::Rect(tl, br);
 }
 
+// To maximize the chance that precomputed cropping values are based on a fully visible object,
+// make the calculations on a frame that is somewhere before the middle of the whole range of frames
 void AlignPage::estimateParameters() {
-    // To maximize the chance that precomputed cropping values are based on a fully visible object,
-    // make the calculations on a frame that is somewhere before the middle of the whole range of frames
     int mediaIndex = mediaFiles.size() / 3;
-    int frameIndex = mediaFiles[mediaIndex].isVideo() ? mediaFiles[mediaIndex].frames() / 3 : 1;
+    int frameIndex = mediaFiles[mediaIndex].isVideo() ? mediaFiles[mediaIndex].frames() / 3 : 0;
 
     cv::Rect object = findObject(mediaFiles[mediaIndex].matAtFrame(frameIndex));
 
     // Default cropping is always a square
     objectSide = std::max(object.width, object.height);
-    processingConfig.cropHeight = processingConfig.cropWidth = objectSide * ui->scaleSpinBox->value();
+    double scale = ui->scaleSpinBox->value();
+    processingConfig.cropHeight = processingConfig.cropWidth = static_cast<int>(objectSide * scale);
 
     // Set the minimum object size as 95% of possible fully visible object
-    processingConfig.minObjectSize = std::min(object.width, object.height) * 0.95;
+    processingConfig.minObjectSize = static_cast<int>(std::min(object.width, object.height) * MIN_OBJECT_SIZE_FACTOR);
 }
 
 cv::Rect AlignPage::findObject(const cv::Mat &frame) {
@@ -159,6 +174,10 @@ cv::Rect AlignPage::findObject(const cv::Mat &frame) {
 
     std::vector<std::vector<cv::Point>> contours;
     cv::findContours(proccessed, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+
+    if (contours.empty()) {
+        return cv::Rect();
+    }
 
     std::vector<cv::Point> allPoints;
     for (const auto &contour : contours) {
@@ -181,7 +200,7 @@ void AlignPage::process() {
     if (mediaFiles.size() > 1 && processingConfig.joinMode && !allDimensionsEqual() && !processingConfig.crop) {
         QMessageBox::critical(this,
                               "Processing error",
-                              "Unable to process in join mode because some media files have different dimensions."
+                              "Unable to process in join mode because some media files have different dimensions. "
                               "Consider applying cropping or using another files.");
         return;
     }
@@ -189,54 +208,50 @@ void AlignPage::process() {
     cv::Size fileDimensions = processingConfig.crop
                                   ? cv::Size(processingConfig.cropWidth, processingConfig.cropHeight)
                                   : mediaFiles[0].dimensions();
+    std::variant<std::string, cv::VideoWriter> output;
 
-    cv::VideoWriter videoOutput;
-    QString filename;
+    // Lambdas for convenience
+    auto constructVideoWriter = [&fileDimensions](const std::string &filename) {
+        return cv::VideoWriter(filename, CODEC_UNCOMPRESSED, DEFAULT_OUTPUT_FPS, fileDimensions, true);
+    };
+    auto writeFrame = [](cv::Mat &frame, std::variant<std::string, cv::VideoWriter> &output) {
+        if (std::holds_alternative<std::string>(output)) {
+            cv::imwrite(std::get<std::string>(output), frame);
+        }
+        else {
+            std::get<cv::VideoWriter>(output).write(frame);
+        }
+    };
 
-    if (processingConfig.joinMode) {
-        filename = "proxima-aligned-" + QDateTime::currentDateTime().toString("dd-MM-yyyy-HH-mm-ss") + ".avi";
-        videoOutput = cv::VideoWriter(filename.toStdString(),
-                                 0, // Codec. '0' for uncompressed
-                                 30.0, // FPS
-                                 fileDimensions, // Dimensions
-                                 true); // Keep color
+    const bool joinMode = processingConfig.joinMode;
 
-        // Check for errors
-        if (!videoOutput.isOpened()) {
-            QMessageBox::critical(this,
-                                  "Processing error",
-                                  "Could not create the output file.");
+    // Create a single .avi output file if join mode is selected
+    if (joinMode) {
+        std::string filename = "proxima-aligned-" + QDateTime::currentDateTime().toString("dd-MM-yyyy-HH-mm-ss").toStdString() + ".avi";
+        output = constructVideoWriter(filename);
+        if (!std::get<cv::VideoWriter>(output).isOpened()) {
+            QMessageBox::critical(this, "File error", "Could not create the file: " + QString::fromStdString(filename));
             return;
         }
     }
 
-    auto writeFrame = [](bool toVideo, cv::VideoWriter &video, std::string filename, cv::Mat &frame) {
-        if (toVideo) {
-            video.write(frame);
-        }
-        else {
-            cv::imwrite(filename, frame);
-        }
-    };
-
     int counter = 1; // Counter of processed frames
     for (auto &media : mediaFiles) {
-        if (!processingConfig.joinMode) {
-            QString extension = media.isVideo() ? ".avi" : ".tif";
-            filename = "proxima-aligned-" + QString::fromStdString(media.filename()) + extension;
+        // Create a separate output file if join mode is not selected
+        if (!joinMode) {
+            std::string extension = media.isVideo() ? ".avi" : ".tif";
+            std::string filename = "proxima-aligned-" + media.filename() + extension;
             if (media.isVideo()) {
-                videoOutput = cv::VideoWriter(filename.toStdString(),
-                                         0, // Codec. '0' for uncompressed
-                                         30.0, // FPS
-                                         fileDimensions, // Dimensions
-                                         true); // Keep color
+                output = constructVideoWriter(filename);
+            }
+            else {
+                output = filename;
             }
         }
 
         for (int i = 0; i < media.frames(); ++i) {
             // Update UI
             ui->currentProcessingEdit->setText(QString::number(counter++) + '/' + QString::number(totalFrames));
-            // Call 'repaint' to update the QLabel correctly
             ui->currentProcessingEdit->repaint();
 
             cv::Mat frame = media.matAtFrame(i);
@@ -249,7 +264,7 @@ void AlignPage::process() {
 
             // Check if crop is not enabled
             if (!processingConfig.crop) {
-                writeFrame(processingConfig.joinMode, videoOutput, filename.toStdString(), processed);
+                writeFrame(processed, output);
                 continue;
             }
 
@@ -269,14 +284,16 @@ void AlignPage::process() {
                 processed = processed(currentCrop);
             }
 
-            writeFrame(processingConfig.joinMode, videoOutput, filename.toStdString(), processed);
+            writeFrame(processed, output);
         }
     }
 
-    videoOutput.release();
+    if (std::holds_alternative<cv::VideoWriter>(output)) {
+        std::get<cv::VideoWriter>(output).release();
+    }
 }
 
-bool AlignPage::allDimensionsEqual() {
+bool AlignPage::allDimensionsEqual() const {
     auto dimensions = mediaFiles[0].dimensions();
     for (int i = 1; i < mediaFiles.size(); ++i) {
         if (mediaFiles[i].dimensions() != dimensions) {
