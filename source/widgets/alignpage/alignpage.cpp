@@ -205,6 +205,9 @@ void AlignPage::process() {
         return;
     }
 
+    // Directory to store output files
+    std::string directory = QFileDialog::getExistingDirectory().toStdString();
+
     cv::Size fileDimensions = processingConfig.crop
                                   ? cv::Size(processingConfig.cropWidth, processingConfig.cropHeight)
                                   : mediaFiles[0].dimensions();
@@ -228,6 +231,7 @@ void AlignPage::process() {
     // Create a single .avi output file if join mode is selected
     if (joinMode) {
         std::string filename = "proxima-aligned-" + QDateTime::currentDateTime().toString("dd-MM-yyyy-HH-mm-ss").toStdString() + ".avi";
+        filename = directory + '/' + filename;
         output = constructVideoWriter(filename);
         if (!std::get<cv::VideoWriter>(output).isOpened()) {
             QMessageBox::critical(this, "File error", "Could not create the file: " + QString::fromStdString(filename));
@@ -241,6 +245,7 @@ void AlignPage::process() {
         if (!joinMode) {
             std::string extension = media.isVideo() ? ".avi" : ".tif";
             std::string filename = "proxima-aligned-" + media.filename() + extension;
+            filename = directory + '/' + filename;
             if (media.isVideo()) {
                 output = constructVideoWriter(filename);
             }
