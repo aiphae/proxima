@@ -5,6 +5,7 @@
 #include <opencv2/opencv.hpp>
 #include "mediafile.h"
 #include "display.h"
+#include "preprocessor.h"
 
 namespace Ui {
 class AlignPage;
@@ -21,51 +22,28 @@ private slots:
     void on_openFilesPushButton_clicked();
 
 private:
-    // UI and display
+    // UI
     Ui::AlignPage *ui;
+    void connectUI();
+    void updateUI();
+
+    // Display
     std::unique_ptr<Display> display;
-    void connectUI(); // Connects UI elements
-    void updateUI(); // Updates current UI state
-    QString fileFilters();
+    int currentFrame = 0;
+    void displayFrame(const int frameNumber);
+    std::tuple<int, int> findMediaFrame(const int frameNumber);
 
     // Selected files
     QStringList selectedFiles;
     std::vector<MediaFile> mediaFiles;
     int totalFrames = 0;
 
-    // Processing configuration
-    struct {
-        bool rejectFrames = false;
-        int minObjectSize = 0;
-        bool crop = false;
-        int cropWidth = 0;
-        int cropHeight = 0;
-        bool toMonochrome = false;
-        bool joinMode = true;
-    } processingConfig;
-
-    // Processing states
-    cv::Rect currentObject;
-    cv::Rect currentCrop;
+    // Processing
+    PreprocessingConfig config;
     int objectSide = 0;
-    int currentFrame = 0;
-
-    // Processing methods
-    cv::Mat processFrame(cv::Mat &frame); // Preprocesses a single frame
-    cv::Rect findObject(const cv::Mat &frame);
-    cv::Rect getCrop(const cv::Mat &frame, const cv::Rect &object);
-    void estimateParameters(); // Estimates cropping side and object detection threshold
-
-    // Processing operations
-    void process(); // Processes all files
-    bool allDimensionsEqual() const;
-
-    // Display operations
-    void displayFrame(const int frameNumber);
-    std::tuple<int, int> findMediaFrame(const int frameNumber);
-    cv::Mat previewProcessing(cv::Mat &frame);
-    void previewCrop(const cv::Mat &frame);
-    void previewObject(const cv::Mat &frame);
+    void estimateParameters();
+    void process();
+    bool allDimensionsEqual();
 };
 
 #endif // ALIGNPAGE_H

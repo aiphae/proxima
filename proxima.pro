@@ -4,19 +4,24 @@ CONFIG += c++17
 
 SOURCES += \
     source/components/display.cpp \
+    source/components/frame.cpp \
     source/components/mediafile.cpp \
     source/main.cpp \
     source/mainwindow/mainwindow.cpp \
     source/widgets/alignpage/alignpage.cpp \
+    source/widgets/alignpage/preprocessor.cpp \
     source/widgets/homepage/homepage.cpp \
     source/widgets/processpage/processpage.cpp \
     source/widgets/stackpage/stackpage.cpp
 
 HEADERS += \
     source/components/display.h \
+    source/components/frame.h \
+    source/components/helpers.h \
     source/components/mediafile.h \
     source/mainwindow/mainwindow.h \
     source/widgets/alignpage/alignpage.h \
+    source/widgets/alignpage/preprocessor.h \
     source/widgets/homepage/homepage.h \
     source/widgets/processpage/processpage.h\
     source/widgets/stackpage/stackpage.h

@@ -4,6 +4,8 @@
 #include <QMessageBox>
 #include <opencv2/opencv.hpp>
 #include <QSet>
+#include "helpers.h"
+#include "frame.h"
 
 // Some constants for clarity
 namespace {
@@ -35,7 +37,7 @@ void AlignPage::on_openFilesPushButton_clicked() {
     }
 
     selectedFiles = files;
-    totalFrames = processingConfig.cropWidth = processingConfig.cropHeight = 0;
+    totalFrames = config.cropWidth = config.cropHeight = 0;
     mediaFiles.clear();
 
     for (const QString &file : files) {
@@ -64,7 +66,7 @@ void AlignPage::displayFrame(const int frameNumber) {
     }
 
     if (cv::Mat frame = mediaFiles[mediaIndex].matAtFrame(localFrame); !frame.empty()) {
-        display->show(previewProcessing(frame));
+        display->show(Preprocessor::preview(frame, config));
     }
 }
 
@@ -79,126 +81,27 @@ std::tuple<int, int> AlignPage::findMediaFrame(const int frameNumber) {
     return {mediaFiles.size(), 0};
 }
 
-cv::Mat AlignPage::previewProcessing(cv::Mat &frame) {
-    cv::Mat processed = processFrame(frame);
-    if (processingConfig.crop) {
-        previewCrop(processed);
-    }
-    if (processingConfig.rejectFrames) {
-        previewObject(processed);
-    }
-    return processed;
-}
-
-void AlignPage::previewCrop(const cv::Mat &frame) {
-    if (currentObject.x <= 0 || currentObject.y <= 0) {
-        return;
-    }
-
-    cv::rectangle(frame, currentCrop, COLOR_GREEN);
-
-    cv::Point cropTextPos(currentCrop.x, currentCrop.y - 5);
-    cv::putText(frame, "Crop", cropTextPos, cv::FONT_HERSHEY_SIMPLEX, 0.5, COLOR_GREEN);
-
-    cv::Point cropCenter(currentObject.x + currentObject.width / 2, currentObject.y + currentObject.height / 2);
-    cv::drawMarker(frame, cropCenter, COLOR_GREEN, cv::MARKER_CROSS, 15, 1);
-}
-
-void AlignPage::previewObject(const cv::Mat &frame) {
-    if (currentObject.x <= 0 || currentObject.y <= 0) {
-        return;
-    }
-
-    cv::rectangle(frame, currentObject, COLOR_BLUE);
-
-    cv::Point objectTextPos(currentObject.x, currentObject.y - 5);
-    cv::putText(frame, "Object", objectTextPos, cv::FONT_HERSHEY_SIMPLEX, 0.5, COLOR_BLUE);
-
-    cv::Point objectCenter(currentObject.x + currentObject.width / 2, currentObject.y + currentObject.height / 2);
-    cv::drawMarker(frame, objectCenter, COLOR_BLUE, cv::MARKER_CROSS, 10, 1);
-}
-
-cv::Mat AlignPage::processFrame(cv::Mat &frame) {
-    cv::Mat processedFrame = frame.clone();
-
-    if (processingConfig.toMonochrome) {
-        cv::cvtColor(processedFrame, processedFrame, cv::COLOR_BGR2GRAY);
-        cv::cvtColor(processedFrame, processedFrame, cv::COLOR_GRAY2BGR);
-    }
-
-    if (processingConfig.rejectFrames || processingConfig.crop) {
-        currentObject = findObject(frame);
-
-        if (!processingConfig.minObjectSize || !processingConfig.cropWidth || !processingConfig.cropHeight) {
-            estimateParameters();
-            updateUI();
-        }
-
-        if (processingConfig.crop) {
-            currentCrop = getCrop(frame, currentObject);
-        }
-    }
-
-    return processedFrame;
-}
-
-cv::Rect AlignPage::getCrop(const cv::Mat &frame, const cv::Rect &object) {
-    cv::Point center = (object.br() + object.tl()) / 2;
-    cv::Point tl(center.x - processingConfig.cropWidth / 2, center.y - processingConfig.cropHeight / 2);
-    cv::Point br(center.x + processingConfig.cropWidth / 2, center.y + processingConfig.cropHeight / 2);
-    return cv::Rect(tl, br);
-}
-
 // To maximize the chance that precomputed cropping values are based on a fully visible object,
 // make the calculations on a frame that is somewhere before the middle of the whole range of frames
 void AlignPage::estimateParameters() {
     int mediaIndex = mediaFiles.size() / 3;
     int frameIndex = mediaFiles[mediaIndex].isVideo() ? mediaFiles[mediaIndex].frames() / 3 : 0;
 
-    cv::Rect object = findObject(mediaFiles[mediaIndex].matAtFrame(frameIndex));
-
-    // Default cropping is always a square
+    Frame frame(mediaFiles[mediaIndex].matAtFrame(frameIndex));
+    cv::Rect object = frame.findObject();
     objectSide = std::max(object.width, object.height);
     double scale = ui->scaleSpinBox->value();
-    processingConfig.cropHeight = processingConfig.cropWidth = static_cast<int>(objectSide * scale);
+    config.cropHeight = config.cropWidth = static_cast<int>(objectSide * scale);
 
     // Set the minimum object size as 95% of possible fully visible object
-    processingConfig.minObjectSize = static_cast<int>(std::min(object.width, object.height) * MIN_OBJECT_SIZE_FACTOR);
-}
-
-cv::Rect AlignPage::findObject(const cv::Mat &frame) {
-    cv::Mat proccessed = frame.clone();
-
-    cv::cvtColor(proccessed, proccessed, cv::COLOR_BGR2GRAY);
-    cv::GaussianBlur(proccessed, proccessed, cv::Size(5, 5), 0);
-    cv::threshold(proccessed, proccessed, 0, 255, cv::THRESH_OTSU | cv::THRESH_BINARY);
-
-    std::vector<std::vector<cv::Point>> contours;
-    cv::findContours(proccessed, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
-
-    if (contours.empty()) {
-        return cv::Rect();
-    }
-
-    std::vector<cv::Point> allPoints;
-    for (const auto &contour : contours) {
-        allPoints.insert(allPoints.end(), contour.begin(), contour.end());
-    }
-
-    cv::Rect boundingRect;
-    if (!allPoints.empty()) {
-        boundingRect = cv::boundingRect(allPoints);
-        if (std::min(boundingRect.width, boundingRect.height) < processingConfig.minObjectSize) {
-            boundingRect = cv::Rect();
-        }
-    }
-
-    return boundingRect;
+    config.minObjectSize = static_cast<int>(std::min(object.width, object.height) * MIN_OBJECT_SIZE_FACTOR);
 }
 
 void AlignPage::process() {
+    const bool joinMode = ui->joinModeRadioButton->isChecked();
+
     // Check for equality of media files dimensions if combining into one file
-    if (mediaFiles.size() > 1 && processingConfig.joinMode && !allDimensionsEqual() && !processingConfig.crop) {
+    if (mediaFiles.size() > 1 && joinMode && !allDimensionsEqual() && !config.crop) {
         QMessageBox::critical(this,
                               "Processing error",
                               "Unable to process in join mode because some media files have different dimensions. "
@@ -209,8 +112,8 @@ void AlignPage::process() {
     // Directory to store output files
     std::string directory = QFileDialog::getExistingDirectory().toStdString();
 
-    cv::Size fileDimensions = processingConfig.crop
-                                  ? cv::Size(processingConfig.cropWidth, processingConfig.cropHeight)
+    cv::Size fileDimensions = config.crop
+                                  ? cv::Size(config.cropWidth, config.cropHeight)
                                   : mediaFiles[0].dimensions();
     std::variant<std::string, cv::VideoWriter> output;
 
@@ -226,8 +129,6 @@ void AlignPage::process() {
             std::get<cv::VideoWriter>(output).write(frame);
         }
     };
-
-    const bool joinMode = processingConfig.joinMode;
 
     // Create a single .avi output file if join mode is selected
     if (joinMode) {
@@ -261,34 +162,8 @@ void AlignPage::process() {
             QCoreApplication::processEvents(); // TEMPORARY
 
             cv::Mat frame = media.matAtFrame(i);
-            cv::Mat processed = processFrame(frame);
 
-            // Check if current frame has no detected object
-            if (processingConfig.rejectFrames && currentObject.width < 1) {
-                continue;
-            }
-
-            // Check if crop is not enabled
-            if (!processingConfig.crop) {
-                writeFrame(processed, output);
-                continue;
-            }
-
-            // Cropping rectangle that fits into frame
-            cv::Rect alignedCrop = currentCrop & cv::Rect(0, 0, processed.cols, processed.rows);
-            // Check if 'alignedCrop' is smaller than required
-            if (alignedCrop.width != processingConfig.cropWidth || alignedCrop.height != processingConfig.cropHeight) {
-                // Fill the out-of-bounds region of currentCrop with black
-                cv::Mat black = cv::Mat::zeros(cv::Size(processingConfig.cropWidth, processingConfig.cropHeight), processed.type());
-                auto imageRect = cv::Rect({}, processed.size());
-                auto intersection = imageRect & currentCrop;
-                auto interROI = intersection - currentCrop.tl();
-                processed(intersection).copyTo(black(interROI));
-                processed = black;
-            }
-            else {
-                processed = processed(currentCrop);
-            }
+            cv::Mat processed = Preprocessor::process(frame, config);
 
             writeFrame(processed, output);
         }
@@ -316,49 +191,49 @@ void AlignPage::connectUI() {
     });
 
     connect(ui->scaleSpinBox, &QDoubleSpinBox::valueChanged, this, [this]() {
-        processingConfig.cropWidth = processingConfig.cropHeight = objectSide * ui->scaleSpinBox->value();
+        config.cropWidth = config.cropHeight = objectSide * ui->scaleSpinBox->value();
         updateUI();
         displayFrame(currentFrame);
     });
 
     connect(ui->cropXSpinBox, &QSpinBox::valueChanged, this, [this]() {
-        processingConfig.cropWidth = ui->cropXSpinBox->value();
+        config.cropWidth = ui->cropXSpinBox->value();
         displayFrame(currentFrame);
     });
 
     connect(ui->cropYSpinBox, &QSpinBox::valueChanged, this, [this]() {
-        processingConfig.cropHeight = ui->cropYSpinBox->value();
+        config.cropHeight = ui->cropYSpinBox->value();
         displayFrame(currentFrame);
     });
 
     connect(ui->minObjectSizeSpinBox, &QSpinBox::valueChanged, this, [this]() {
-        processingConfig.minObjectSize = ui->minObjectSizeSpinBox->value();
+        config.minObjectSize = ui->minObjectSizeSpinBox->value();
         displayFrame(currentFrame);
     });
 
     connect(ui->rejectFramesCheckBox, &QCheckBox::checkStateChanged, this, [this](Qt::CheckState state) {
         ui->objectDetectionFrame->setEnabled(state == Qt::Checked);
-        processingConfig.rejectFrames = (state == Qt::Checked);
+        config.rejectFrames = (state == Qt::Checked);
+        if (!config.minObjectSize) {
+            estimateParameters();
+            updateUI();
+        }
         displayFrame(currentFrame);
     });
 
     connect(ui->cropCheckBox, &QCheckBox::checkStateChanged, this, [this](Qt::CheckState state) {
         ui->cropValuesFrame->setEnabled(state == Qt::Checked);
-        processingConfig.crop = (state == Qt::Checked);
+        config.crop = (state == Qt::Checked);
+        if (!config.cropWidth || !config.cropHeight) {
+            estimateParameters();
+            updateUI();
+        }
         displayFrame(currentFrame);
     });
 
     connect(ui->monochromeCheckBox, &QCheckBox::checkStateChanged, this, [this](Qt::CheckState state) {
-        processingConfig.toMonochrome = (state == Qt::Checked);
+        config.toMonochrome = (state == Qt::Checked);
         displayFrame(currentFrame);
-    });
-
-    connect(ui->joinModeRadioButton, &QRadioButton::clicked, this, [this]() {
-        processingConfig.joinMode = ui->joinModeRadioButton->isChecked();
-    });
-
-    connect(ui->batchModeRadioButton, &QRadioButton::clicked, this, [this]() {
-        processingConfig.joinMode = !ui->batchModeRadioButton->isChecked();
     });
 
     connect(ui->doProcessingPushButton, &QPushButton::clicked, this, &AlignPage::process);
@@ -367,30 +242,12 @@ void AlignPage::connectUI() {
 void AlignPage::updateUI() {
     ui->cropXSpinBox->blockSignals(true);
     ui->cropYSpinBox->blockSignals(true);
-    ui->cropXSpinBox->setValue(processingConfig.cropWidth);
-    ui->cropYSpinBox->setValue(processingConfig.cropHeight);
+    ui->cropXSpinBox->setValue(config.cropWidth);
+    ui->cropYSpinBox->setValue(config.cropHeight);
     ui->cropXSpinBox->blockSignals(false);
     ui->cropYSpinBox->blockSignals(false);
 
     ui->minObjectSizeSpinBox->blockSignals(true);
-    ui->minObjectSizeSpinBox->setValue(processingConfig.minObjectSize);
+    ui->minObjectSizeSpinBox->setValue(config.minObjectSize);
     ui->minObjectSizeSpinBox->blockSignals(false);
-}
-
-QString AlignPage::fileFilters() {
-    auto buildFilter = [](const QString &description, const QSet<QString> &extensions) {
-        QStringList patterns;
-        for (const QString &extension : extensions) {
-            patterns << "*" + extension;
-        }
-        return QString("%1 (%2)").arg(description, patterns.join(' '));
-    };
-
-    QString imageFilter = buildFilter("Image Files", imageExtensions);
-    QString videoFilter = buildFilter("Video Files", videoExtensions);
-
-    QSet<QString> allExtensions = imageExtensions + videoExtensions;
-    QString allFilter = buildFilter("All Supported Files", allExtensions);
-
-    return allFilter + ";;" + imageFilter + ";;" + videoFilter;
 }
