@@ -3,6 +3,7 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <opencv2/opencv.hpp>
+#include <QSet>
 
 // Some constants for clarity
 namespace {
@@ -11,7 +12,7 @@ namespace {
     const double MIN_OBJECT_SIZE_FACTOR = 0.95;
 
     const cv::Scalar COLOR_GREEN(0, 255, 0);
-    const cv::Scalar COLOR_BLUE(0, 0, 255);
+    const cv::Scalar COLOR_BLUE(255, 0, 0);
 }
 
 AlignPage::AlignPage(QWidget *parent)
@@ -28,7 +29,7 @@ AlignPage::~AlignPage() {
 }
 
 void AlignPage::on_openFilesPushButton_clicked() {
-    QStringList files = QFileDialog::getOpenFileNames(this, QDir::homePath());
+    QStringList files = QFileDialog::getOpenFileNames(this, "Select Files", QDir::homePath(), fileFilters());
     if (files.isEmpty()) {
         return;
     }
@@ -257,7 +258,7 @@ void AlignPage::process() {
         for (int i = 0; i < media.frames(); ++i) {
             // Update UI
             ui->currentProcessingEdit->setText(QString::number(counter++) + '/' + QString::number(totalFrames));
-            ui->currentProcessingEdit->repaint();
+            QCoreApplication::processEvents(); // TEMPORARY
 
             cv::Mat frame = media.matAtFrame(i);
             cv::Mat processed = processFrame(frame);
@@ -374,4 +375,22 @@ void AlignPage::updateUI() {
     ui->minObjectSizeSpinBox->blockSignals(true);
     ui->minObjectSizeSpinBox->setValue(processingConfig.minObjectSize);
     ui->minObjectSizeSpinBox->blockSignals(false);
+}
+
+QString AlignPage::fileFilters() {
+    auto buildFilter = [](const QString &description, const QSet<QString> &extensions) {
+        QStringList patterns;
+        for (const QString &extension : extensions) {
+            patterns << "*" + extension;
+        }
+        return QString("%1 (%2)").arg(description, patterns.join(' '));
+    };
+
+    QString imageFilter = buildFilter("Image Files", imageExtensions);
+    QString videoFilter = buildFilter("Video Files", videoExtensions);
+
+    QSet<QString> allExtensions = imageExtensions + videoExtensions;
+    QString allFilter = buildFilter("All Supported Files", allExtensions);
+
+    return allFilter + ";;" + imageFilter + ";;" + videoFilter;
 }

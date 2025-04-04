@@ -26,10 +26,11 @@ private:
     std::unique_ptr<Display> display;
     void connectUI(); // Connects UI elements
     void updateUI(); // Updates current UI state
+    QString fileFilters();
 
     // Selected files
     QStringList selectedFiles;
-    QVector<MediaFile> mediaFiles;
+    std::vector<MediaFile> mediaFiles;
     int totalFrames = 0;
 
     // Processing configuration
