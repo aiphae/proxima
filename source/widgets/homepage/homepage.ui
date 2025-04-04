@@ -39,7 +39,7 @@
     </spacer>
    </item>
    <item row="3" column="1">
-    <widget class="QPushButton" name="alignPagePushButton">
+    <widget class="QPushButton" name="preprocessPagePushButton">
      <property name="minimumSize">
       <size>
        <width>150</width>
@@ -119,9 +119,9 @@
     </spacer>
    </item>
    <item row="4" column="1">
-    <widget class="QLabel" name="alignLabel">
+    <widget class="QLabel" name="preprocessLabel">
      <property name="text">
-      <string>Align</string>
+      <string>Preprocess</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignmentFlag::AlignCenter</set>

@@ -15,7 +15,7 @@ HomePage::~HomePage() {
 }
 
 void HomePage::connectButtons() {
-    QVector<QPushButton *> buttons = {ui->alignPagePushButton, ui->stackPagePushButton, ui->processPagePushButton};
+    QVector<QPushButton *> buttons = {ui->preprocessPagePushButton, ui->stackPagePushButton, ui->processPagePushButton};
     for (int i = 0; i < buttons.size(); ++i) {
         connect(buttons[i], &QPushButton::clicked, this, [this, i]() {
             // 'i + 1' because 0 is reserved for home page
