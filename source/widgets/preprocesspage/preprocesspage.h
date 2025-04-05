@@ -1,5 +1,5 @@
-#ifndef ALIGNPAGE_H
-#define ALIGNPAGE_H
+#ifndef PREPROCESSPAGE_H
+#define PREPROCESSPAGE_H
 
 #include <QWidget>
 #include <opencv2/opencv.hpp>
@@ -46,4 +46,4 @@ private:
     bool allDimensionsEqual();
 };
 
-#endif // ALIGNPAGE_H
+#endif // PREPROCESSPAGE_H

@@ -1,5 +1,5 @@
-#include "alignpage.h"
-#include "ui_alignpage.h"
+#include "preprocesspage.h"
+#include "ui_preprocesspage.h"
 #include <QFileDialog>
 #include <QMessageBox>
 #include <opencv2/opencv.hpp>
@@ -12,9 +12,6 @@ namespace {
     const double DEFAULT_OUTPUT_FPS = 30.0;
     const int CODEC_UNCOMPRESSED = 0;
     const double MIN_OBJECT_SIZE_FACTOR = 0.95;
-
-    const cv::Scalar COLOR_GREEN(0, 255, 0);
-    const cv::Scalar COLOR_BLUE(255, 0, 0);
 }
 
 AlignPage::AlignPage(QWidget *parent)
@@ -162,7 +159,6 @@ void AlignPage::process() {
             QCoreApplication::processEvents(); // TEMPORARY
 
             cv::Mat frame = media.matAtFrame(i);
-
             cv::Mat processed = Preprocessor::process(frame, config);
 
             writeFrame(processed, output);
@@ -174,7 +170,7 @@ void AlignPage::process() {
     }
 }
 
-bool AlignPage::allDimensionsEqual() const {
+bool AlignPage::allDimensionsEqual() {
     auto dimensions = mediaFiles[0].dimensions();
     for (int i = 1; i < mediaFiles.size(); ++i) {
         if (mediaFiles[i].dimensions() != dimensions) {
