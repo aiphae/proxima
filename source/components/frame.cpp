@@ -57,7 +57,7 @@ cv::Mat Frame::crop(cv::Rect rect) {
     }
 }
 
-// Converts the image to grayscale and keeps it 3-channel
+// Converts the image to grayscale and keeps it 3-channel.
 void Frame::convertToGray() {
     cv::cvtColor(image, image, cv::COLOR_BGR2GRAY);
     cv::cvtColor(image, image, cv::COLOR_GRAY2BGR);
