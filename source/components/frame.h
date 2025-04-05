@@ -8,14 +8,10 @@ class Frame {
 public:
     Frame(cv::Mat mat) : image(mat.clone()) {}
 
-    cv::Rect findObject(int minSize = 0);
-
-    cv::Rect getObjectCrop(cv::Rect object, int width, int height);
-
-    cv::Mat crop(cv::Rect rect);
-
-    void convertColor(int code);
-
+    cv::Rect findObject(int minSize = 0); // Finds an object and returns its bounding rectangle
+    cv::Rect getObjectCrop(cv::Rect object, int width, int height); // Returns a crop rectangle centered on the object
+    cv::Mat crop(cv::Rect rect); // Crops the image on 'rect'
+    void convertToGray();
     cv::Mat &mat() { return image; }
 
 private:

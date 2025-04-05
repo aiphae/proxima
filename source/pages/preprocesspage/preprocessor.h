@@ -12,6 +12,7 @@ struct PreprocessingConfig {
     bool toMonochrome = false;
 };
 
+// Preprocessor class for applying and previewing preprocessing
 class Preprocessor {
 public:
     static cv::Mat process(cv::Mat &frame, PreprocessingConfig &config);

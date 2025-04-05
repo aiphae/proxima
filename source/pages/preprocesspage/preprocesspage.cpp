@@ -79,17 +79,16 @@ std::tuple<int, int> AlignPage::findMediaFrame(const int frameNumber) {
 }
 
 // To maximize the chance that precomputed cropping values are based on a fully visible object,
-// make the calculations on a frame that is somewhere before the middle of the whole range of frames
+// make the calculations on a frame that is somewhere before the middle of the whole range of frames.
 void AlignPage::estimateParameters() {
     int mediaIndex = mediaFiles.size() / 3;
     int frameIndex = mediaFiles[mediaIndex].isVideo() ? mediaFiles[mediaIndex].frames() / 3 : 0;
 
     Frame frame(mediaFiles[mediaIndex].matAtFrame(frameIndex));
     cv::Rect object = frame.findObject();
-    objectSide = std::max(object.width, object.height);
-    double scale = ui->scaleSpinBox->value();
-    config.cropHeight = config.cropWidth = static_cast<int>(objectSide * scale);
 
+    objectSide = std::max(object.width, object.height);
+    config.cropHeight = config.cropWidth = static_cast<int>(objectSide * ui->scaleSpinBox->value());
     config.minObjectSize = static_cast<int>(std::min(object.width, object.height) * MIN_OBJECT_SIZE_FACTOR);
 }
 
@@ -105,13 +104,11 @@ void AlignPage::process() {
         return;
     }
 
-    // Directory to store output files
-    std::string directory = QFileDialog::getExistingDirectory().toStdString();
-
+    std::string directory = QFileDialog::getExistingDirectory().toStdString(); // Directory to store output files
+    std::variant<std::string, cv::VideoWriter> output; // Output for either image or video
     cv::Size fileDimensions = config.crop
                                   ? cv::Size(config.cropWidth, config.cropHeight)
                                   : mediaFiles[0].dimensions();
-    std::variant<std::string, cv::VideoWriter> output;
 
     // Lambdas for convenience
     auto constructVideoWriter = [&fileDimensions](const std::string &filename) {
@@ -139,7 +136,7 @@ void AlignPage::process() {
 
     int counter = 1; // Counter of processed frames
     for (auto &media : mediaFiles) {
-        // Create a separate output file if join mode is not selected
+        // Create a separate output file if processing separately
         if (!joinMode) {
             std::string extension = media.isVideo() ? ".avi" : ".tif";
             std::string filename = "proxima-aligned-" + media.filename() + extension;
@@ -169,6 +166,8 @@ void AlignPage::process() {
     }
 }
 
+// Checks if all media files have equal dimensions (width and height).
+// Necessary before combining into a single file.
 bool AlignPage::allDimensionsEqual() {
     auto dimensions = mediaFiles[0].dimensions();
     for (int i = 1; i < mediaFiles.size(); ++i) {
@@ -234,6 +233,7 @@ void AlignPage::connectUI() {
     connect(ui->doProcessingPushButton, &QPushButton::clicked, this, &AlignPage::process);
 }
 
+// Updates spin boxes without triggering their signals.
 void AlignPage::updateUI() {
     ui->cropXSpinBox->blockSignals(true);
     ui->cropYSpinBox->blockSignals(true);
