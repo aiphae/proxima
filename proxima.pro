@@ -8,9 +8,11 @@ SOURCES += \
     source/components/mediafile.cpp \
     source/main.cpp \
     source/mainwindow/mainwindow.cpp \
-    source/widgets/alignpage/alignpage.cpp \
     source/widgets/alignpage/preprocessor.cpp \
+    source/widgets/alignpage/preprocesspage.cpp \
     source/widgets/homepage/homepage.cpp \
+    source/widgets/preprocesspage/preprocessor.cpp \
+    source/widgets/preprocesspage/preprocesspage.cpp \
     source/widgets/processpage/processpage.cpp \
     source/widgets/stackpage/stackpage.cpp
 
@@ -20,16 +22,19 @@ HEADERS += \
     source/components/helpers.h \
     source/components/mediafile.h \
     source/mainwindow/mainwindow.h \
-    source/widgets/alignpage/alignpage.h \
     source/widgets/alignpage/preprocessor.h \
+    source/widgets/alignpage/preprocesspage.h \
     source/widgets/homepage/homepage.h \
+    source/widgets/preprocesspage/preprocessor.h \
+    source/widgets/preprocesspage/preprocesspage.h \
     source/widgets/processpage/processpage.h\
     source/widgets/stackpage/stackpage.h
 
 FORMS += \
     source/mainwindow/mainwindow.ui \
-    source/widgets/alignpage/alignpage.ui \
+    source/widgets/alignpage/preprocesspage.ui \
     source/widgets/homepage/homepage.ui \
+    source/widgets/preprocesspage/preprocesspage.ui \
     source/widgets/processpage/processpage.ui \
     source/widgets/stackpage/stackpage.ui
 
