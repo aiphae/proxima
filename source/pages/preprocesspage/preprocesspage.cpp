@@ -90,7 +90,6 @@ void AlignPage::estimateParameters() {
     double scale = ui->scaleSpinBox->value();
     config.cropHeight = config.cropWidth = static_cast<int>(objectSide * scale);
 
-    // Set the minimum object size as 95% of possible fully visible object
     config.minObjectSize = static_cast<int>(std::min(object.width, object.height) * MIN_OBJECT_SIZE_FACTOR);
 }
 

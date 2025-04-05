@@ -1,7 +1,7 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "homepage/homepage.h"
-#include "alignpage/preprocesspage.h"
+#include "preprocesspage/preprocesspage.h"
 #include "stackpage/stackpage.h"
 #include "processpage/processpage.h"
 

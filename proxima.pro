@@ -8,13 +8,11 @@ SOURCES += \
     source/components/mediafile.cpp \
     source/main.cpp \
     source/mainwindow/mainwindow.cpp \
-    source/widgets/alignpage/preprocessor.cpp \
-    source/widgets/alignpage/preprocesspage.cpp \
-    source/widgets/homepage/homepage.cpp \
-    source/widgets/preprocesspage/preprocessor.cpp \
-    source/widgets/preprocesspage/preprocesspage.cpp \
-    source/widgets/processpage/processpage.cpp \
-    source/widgets/stackpage/stackpage.cpp
+    source/pages/preprocesspage/preprocessor.cpp \
+    source/pages/preprocesspage/preprocesspage.cpp \
+    source/pages/homepage/homepage.cpp \
+    source/pages/processpage/processpage.cpp \
+    source/pages/stackpage/stackpage.cpp
 
 HEADERS += \
     source/components/display.h \
@@ -22,25 +20,22 @@ HEADERS += \
     source/components/helpers.h \
     source/components/mediafile.h \
     source/mainwindow/mainwindow.h \
-    source/widgets/alignpage/preprocessor.h \
-    source/widgets/alignpage/preprocesspage.h \
-    source/widgets/homepage/homepage.h \
-    source/widgets/preprocesspage/preprocessor.h \
-    source/widgets/preprocesspage/preprocesspage.h \
-    source/widgets/processpage/processpage.h\
-    source/widgets/stackpage/stackpage.h
+    source/pages/homepage/homepage.h \
+    source/pages/preprocesspage/preprocessor.h \
+    source/pages/preprocesspage/preprocesspage.h \
+    source/pages/processpage/processpage.h\
+    source/pages/stackpage/stackpage.h
 
 FORMS += \
     source/mainwindow/mainwindow.ui \
-    source/widgets/alignpage/preprocesspage.ui \
-    source/widgets/homepage/homepage.ui \
-    source/widgets/preprocesspage/preprocesspage.ui \
-    source/widgets/processpage/processpage.ui \
-    source/widgets/stackpage/stackpage.ui
+    source/pages/homepage/homepage.ui \
+    source/pages/preprocesspage/preprocesspage.ui \
+    source/pages/processpage/processpage.ui \
+    source/pages/stackpage/stackpage.ui
 
 INCLUDEPATH += \
     source/mainwindow \
-    source/widgets/ \
+    source/pages/ \
     source/components
 
 qnx: target.path = /tmp/$${TARGET}/bin
