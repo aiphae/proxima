@@ -22,15 +22,15 @@ inline QString fileFilters() {
     return allFilter + ";;" + imageFilter + ";;" + videoFilter;
 }
 
-inline std::pair<int, int> findMediaFrame(std::vector<MediaFile> &files, int frame) {
+inline cv::Mat getMatAtFrame(std::vector<MediaFile> &files, int frame) {
     int currentFrame = 0;
     for (int i = 0; i < files.size(); ++i) {
         if (frame < currentFrame + files[i].frames()) {
-            return {i, frame - currentFrame};
+            return files[i].matAtFrame(frame - currentFrame);
         }
         currentFrame += files[i].frames();
     }
-    return {files.size(), 0};
+    return cv::Mat();
 }
 
 #endif // HELPERS_H

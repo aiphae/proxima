@@ -57,12 +57,7 @@ void AlignPage::displayFrame(const int frameNumber) {
         return;
     }
 
-    auto [mediaIndex, localFrame] = findMediaFrame(mediaFiles, frameNumber);
-    if (mediaIndex >= mediaFiles.size()) {
-        return;
-    }
-
-    if (cv::Mat frame = mediaFiles[mediaIndex].matAtFrame(localFrame); !frame.empty()) {
+    if (cv::Mat frame = getMatAtFrame(mediaFiles, frameNumber); !frame.empty()) {
         display->show(Preprocessor::preview(frame, config));
     }
 }

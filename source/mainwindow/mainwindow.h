@@ -11,9 +11,8 @@ QT_END_NAMESPACE
 
 enum class Pages {
     Home = 0,
-    Align = 1,
-    Stack = 2,
-    Process = 3
+    Stack = 1,
+    Process = 2
 };
 
 class MainWindow : public QMainWindow {

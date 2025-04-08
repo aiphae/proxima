@@ -1,7 +1,6 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "homepage/homepage.h"
-#include "preprocesspage/preprocesspage.h"
 #include "stackpage/stackpage.h"
 #include "processpage/processpage.h"
 
@@ -25,9 +24,6 @@ MainWindow::~MainWindow() {
 void MainWindow::initializePages() {
     auto homePage = new HomePage(this);
     ui->stackedWidget->insertWidget(static_cast<int>(Pages::Home), homePage);
-
-    auto alignPage = new AlignPage(this);
-    ui->stackedWidget->insertWidget(static_cast<int>(Pages::Align), alignPage);
 
     auto stackPage = new StackPage(this);
     ui->stackedWidget->insertWidget(static_cast<int>(Pages::Stack), stackPage);

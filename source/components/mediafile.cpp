@@ -41,7 +41,6 @@ cv::Mat MediaFile::matAtFrame(int frame) {
     return image;
 }
 
-
 MediaFile::~MediaFile() {
     if (_isVideo) {
         video.release();

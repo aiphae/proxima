@@ -16,7 +16,7 @@ const QSet<QString> videoExtensions = {
 };
 
 // Represents a single media file (video or image)
-// and provides ability to extract frames from it
+// and provides ability to extract specific frames from it
 class MediaFile {
 public:
     MediaFile(const QString &filename);
@@ -24,7 +24,7 @@ public:
 
     bool isValid() const { return _isValid; }
     bool isVideo() const { return _isVideo; };
-    unsigned int frames() const { return _frames; };
+    int frames() const { return _frames; };
     cv::Size dimensions() const { return _dimensions; }
     std::string extension() const { return _extension; }
     std::string filename() const { return _filename; }
@@ -36,7 +36,7 @@ private:
 
     bool _isValid = false;
     bool _isVideo = false;
-    unsigned long _frames = 0;
+    int _frames = 0;
     cv::Size _dimensions = {0, 0};
     std::string _extension;
     std::string _filename;

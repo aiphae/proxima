@@ -1,5 +1,9 @@
 #include "frame.h"
 
+cv::Mat Frame::cropOnObject(int width, int height) {
+    return crop(getObjectCrop(findObject(), width, height));
+}
+
 cv::Rect Frame::findObject(int minSize) {
     cv::Mat proccessed = image.clone();
 
