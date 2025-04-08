@@ -6,20 +6,13 @@
 // Represents a single frame and allows some processing to it
 class Frame {
 public:
-    Frame(cv::Mat mat) : image(mat) {}
-
-    cv::Mat cropOnObject(int width, int height);
-
-    cv::Rect findObject(int minSize = 0); // Finds an object and returns its bounding rectangle
-    cv::Rect getObjectCrop(cv::Rect object, int width, int height); // Returns a crop rectangle centered on the object
-    cv::Mat crop(cv::Rect rect); // Crops the image on 'rect'
-    void convertToGray();
-    double estimateQuality();
-
-    cv::Mat &mat() { return image; }
+    static cv::Mat cropOnObject(cv::Mat frame, int width, int height);
+    static double estimateQuality(cv::Mat frame);
 
 private:
-    cv::Mat image;
+    static cv::Mat crop(cv::Mat frame, cv::Rect rect); // Crops 'frame' on 'rect'
+    static cv::Rect getObjectCrop(cv::Mat frame, cv::Rect object, int width, int height); // Returns a crop rectangle centered on the object
+    static cv::Rect findObject(cv::Mat frame); // Finds an object and returns its bounding rectangle
 };
 
 #endif // FRAME_H
