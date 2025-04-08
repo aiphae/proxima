@@ -8,8 +8,6 @@ SOURCES += \
     source/components/mediafile.cpp \
     source/main.cpp \
     source/mainwindow/mainwindow.cpp \
-    source/pages/preprocesspage/preprocessor.cpp \
-    source/pages/preprocesspage/preprocesspage.cpp \
     source/pages/homepage/homepage.cpp \
     source/pages/processpage/processpage.cpp \
     source/pages/stackpage/stacker.cpp \
@@ -22,8 +20,6 @@ HEADERS += \
     source/components/mediafile.h \
     source/mainwindow/mainwindow.h \
     source/pages/homepage/homepage.h \
-    source/pages/preprocesspage/preprocessor.h \
-    source/pages/preprocesspage/preprocesspage.h \
     source/pages/processpage/processpage.h\
     source/pages/stackpage/stacker.h \
     source/pages/stackpage/stackpage.h
@@ -31,7 +27,6 @@ HEADERS += \
 FORMS += \
     source/mainwindow/mainwindow.ui \
     source/pages/homepage/homepage.ui \
-    source/pages/preprocesspage/preprocesspage.ui \
     source/pages/processpage/processpage.ui \
     source/pages/stackpage/stackpage.ui
 
