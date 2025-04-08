@@ -4,12 +4,7 @@
 #include <opencv2/imgproc.hpp>
 
 cv::Mat Stacker::stack(const StackingSource &source, const StackingConfiguration &config) {
-    cv::Mat result;
-    if (aps.empty()) {
-        result = stackGlobal(source, config);
-    }
-
-    return result;
+    return aps.empty() ? stackGlobal(source, config) : cv::Mat();
 }
 
 cv::Mat Stacker::stackGlobal(const StackingSource &source, const StackingConfiguration &config) {
@@ -22,22 +17,24 @@ cv::Mat Stacker::stackGlobal(const StackingSource &source, const StackingConfigu
 
     for (int i = 0; i < config.frames; ++i) {
         cv::Mat frame = getMatAtFrame(source.files, source.sorted[i].first);
-        frame = Frame(frame).cropOnObject(config.width, config.height);
+        if (frame.empty()) {
+            continue;
+        }
+
+        frame = Frame::cropOnObject(frame, config.width, config.height);
 
         cv::Mat gray;
         cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
         gray.convertTo(gray, CV_32F);
 
-        cv::Point2d shift = cv::phaseCorrelate(refGray, gray);
-
-        cv::Mat translationMatrix = (cv::Mat_<double>(2, 3) <<
+        const cv::Point2d shift = cv::phaseCorrelate(refGray, gray);
+        const cv::Mat transform = (cv::Mat_<double>(2, 3) <<
             1, 0, -shift.x,
             0, 1, -shift.y
         );
 
         cv::Mat aligned;
-        cv::warpAffine(frame, aligned, translationMatrix, source.reference.size(),
-                       cv::INTER_LANCZOS4, cv::BORDER_REPLICATE);
+        cv::warpAffine(frame, aligned, transform, source.reference.size(), cv::INTER_LANCZOS4, cv::BORDER_REPLICATE);
 
         aligned.convertTo(aligned, CV_32FC3);
         accumulator += aligned;
@@ -45,12 +42,12 @@ cv::Mat Stacker::stackGlobal(const StackingSource &source, const StackingConfigu
     }
 
     if (stacked == 0) {
-        return cv::Mat();
+        return {};
     }
 
     accumulator /= stacked;
-    cv::Mat finalStack;
-    accumulator.convertTo(finalStack, CV_8UC3);
+    cv::Mat result;
+    accumulator.convertTo(result, CV_8UC3);
 
-    return finalStack;
+    return result;
 }
