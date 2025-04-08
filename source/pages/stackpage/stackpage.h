@@ -26,6 +26,7 @@ private:
     // UI
     Ui::StackPage *ui;
     void connectUI();
+    void updateUI();
 
     // Display
     std::unique_ptr<Display> display;
@@ -34,11 +35,10 @@ private:
 
     // Media files
     std::vector<MediaFile> mediaFiles;
+    std::vector<std::pair<int, double>> sortedFrames;
     int totalFrames = 0;
 
-    std::vector<std::pair<int, double>> sortedFrames;
-    void sortFrames();
-
+    // Stacking
     Stacker stacker;
     StackingConfiguration config;
 };
