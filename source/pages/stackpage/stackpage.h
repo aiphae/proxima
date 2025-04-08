@@ -4,6 +4,7 @@
 #include <QWidget>
 #include "mediafile.h"
 #include "display.h"
+#include "stacker.h"
 
 namespace Ui {
 class StackPage;
@@ -18,24 +19,27 @@ public:
 
 private slots:
     void on_selectFilesPushButton_clicked();
+    void on_estimateAPGridPushButton_clicked();
+    void on_stackPushButton_clicked();
 
 private:
+    // UI
     Ui::StackPage *ui;
-    std::unique_ptr<Display> display;
     void connectUI();
-    QString fileFilters();
 
-    std::vector<MediaFile> mediaFiles;
-    std::vector<std::pair<int, double>> sortedFrames;
-    int totalFrames = 0;
-
-    void sortFrames();
-
+    // Display
+    std::unique_ptr<Display> display;
     void displayFrame(const int frameNumber);
-    std::tuple<int, int> findMediaFrame(const int frameNumber);
     int currentFrame = 0;
 
-    double calculateFrameQuality(const cv::Mat &mat);
+    // Media files
+    std::vector<MediaFile> mediaFiles;
+    int totalFrames = 0;
+
+    std::vector<std::pair<int, double>> sortedFrames;
+    void sortFrames();
+
+    Stacker stacker;
 };
 
 #endif // STACKPAGE_H

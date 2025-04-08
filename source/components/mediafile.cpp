@@ -26,13 +26,7 @@ MediaFile::MediaFile(const QString &filename) {
     _extension = extension.toStdString();
 }
 
-MediaFile::~MediaFile() {
-    if (_isVideo) {
-        video.release();
-    }
-}
-
-cv::Mat MediaFile::matAtFrame(unsigned int frame) {
+cv::Mat MediaFile::matAtFrame(int frame) {
     if (_isVideo) {
         video.set(cv::CAP_PROP_POS_FRAMES, frame);
         cv::Mat mat;
@@ -45,4 +39,11 @@ cv::Mat MediaFile::matAtFrame(unsigned int frame) {
     }
 
     return image;
+}
+
+
+MediaFile::~MediaFile() {
+    if (_isVideo) {
+        video.release();
+    }
 }

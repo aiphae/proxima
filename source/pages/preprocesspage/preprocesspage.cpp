@@ -46,7 +46,7 @@ void AlignPage::on_openFilesPushButton_clicked() {
 
     ui->totalFramesEdit->setText(QString::number(totalFrames));
     ui->frameSlider->setMinimum(0);
-    ui->frameSlider->setMaximum(totalFrames);
+    ui->frameSlider->setMaximum(totalFrames - 1);
     ui->frameSlider->setValue(0);
 
     displayFrame(0);
@@ -57,7 +57,7 @@ void AlignPage::displayFrame(const int frameNumber) {
         return;
     }
 
-    auto [mediaIndex, localFrame] = findMediaFrame(frameNumber);
+    auto [mediaIndex, localFrame] = findMediaFrame(mediaFiles, frameNumber);
     if (mediaIndex >= mediaFiles.size()) {
         return;
     }
@@ -65,17 +65,6 @@ void AlignPage::displayFrame(const int frameNumber) {
     if (cv::Mat frame = mediaFiles[mediaIndex].matAtFrame(localFrame); !frame.empty()) {
         display->show(Preprocessor::preview(frame, config));
     }
-}
-
-std::tuple<int, int> AlignPage::findMediaFrame(const int frameNumber) {
-    int currentFrame = 0;
-    for (int i = 0; i < mediaFiles.size(); ++i) {
-        if (frameNumber < currentFrame + mediaFiles[i].frames()) {
-            return {i, frameNumber - currentFrame};
-        }
-        currentFrame += mediaFiles[i].frames();
-    }
-    return {mediaFiles.size(), 0};
 }
 
 // To maximize the chance that precomputed cropping values are based on a fully visible object,

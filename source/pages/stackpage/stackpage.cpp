@@ -1,6 +1,8 @@
 #include "stackpage.h"
 #include "ui_stackpage.h"
 #include <QFileDialog>
+#include "helpers.h"
+#include "frame.h"
 
 StackPage::StackPage(QWidget *parent)
     : QWidget(parent)
@@ -33,43 +35,51 @@ void StackPage::on_selectFilesPushButton_clicked() {
 
     ui->totalFramesEdit->setText(QString::number(totalFrames));
     ui->frameSlider->setMinimum(0);
-    ui->frameSlider->setMaximum(totalFrames - 1);  // Fixed: subtract 1 since we start at 0
+    ui->frameSlider->setMaximum(totalFrames - 1);
     ui->frameSlider->setValue(0);
 
     sortedFrames.clear();
     for (int i = 0; i < totalFrames; ++i) {
-        sortedFrames.emplace_back(i, 0.0);  // Initialize with original frame index
+        sortedFrames.emplace_back(i, 0.0);
     }
 
     displayFrame(0);
 }
 
 void StackPage::displayFrame(const int frameNumber) {
-    if (mediaFiles.empty() || frameNumber < 0 || frameNumber >= totalFrames) {
+    if (mediaFiles.empty()) {
         return;
     }
 
-    // Use the original frame index from sortedFrames
-    int originalFrameIdx = sortedFrames[frameNumber].first;
-    auto [mediaIndex, localFrame] = findMediaFrame(originalFrameIdx);
-    if (mediaIndex >= mediaFiles.size()) {
-        return;
-    }
+    int index = sortedFrames[frameNumber].first;
+    auto [mediaIndex, localFrame] = findMediaFrame(mediaFiles, index);
 
     if (cv::Mat frame = mediaFiles[mediaIndex].matAtFrame(localFrame); !frame.empty()) {
         display->show(frame);
     }
 }
 
-std::tuple<int, int> StackPage::findMediaFrame(const int frameNumber) {
-    int currentFrame = 0;
-    for (int i = 0; i < mediaFiles.size(); ++i) {
-        if (frameNumber < currentFrame + mediaFiles[i].frames()) {
-            return {i, frameNumber - currentFrame};
-        }
-        currentFrame += mediaFiles[i].frames();
+void StackPage::on_estimateAPGridPushButton_clicked() {
+
+}
+
+void StackPage::on_stackPushButton_clicked() {
+    if (sortedFrames.empty()) {
+        return;
     }
-    return {mediaFiles.size(), 0};
+
+    auto [media, index] = findMediaFrame(mediaFiles, sortedFrames[0].first);
+    stacker.reference = mediaFiles[media].matAtFrame(index);
+
+    std::vector<cv::Mat> frames;
+    for (int i = 0; i < 0.2 * totalFrames; ++i) {
+        auto [media, index] = findMediaFrame(mediaFiles, i);
+        frames.emplace_back(mediaFiles[media].matAtFrame(index));
+    }
+
+    cv::Mat stacked = stacker.stack(frames);
+    display->show(stacked);
+    cv::imwrite("output.tif", stacked);
 }
 
 void StackPage::connectUI() {
@@ -83,62 +93,23 @@ void StackPage::connectUI() {
             return;
         }
 
-        // Calculate quality scores for all frames
-        for (int frameIdx = 0; frameIdx < totalFrames; ++frameIdx) {
-            auto [mediaIndex, localFrame] = findMediaFrame(frameIdx);
-            if (mediaIndex >= mediaFiles.size()) {
-                continue;
-            }
-
+        for (int frame = 0; frame < totalFrames; ++frame) {
+            auto [mediaIndex, localFrame] = findMediaFrame(mediaFiles, frame);
             cv::Mat mat = mediaFiles[mediaIndex].matAtFrame(localFrame);
             if (!mat.empty()) {
-                double qualityScore = calculateFrameQuality(mat);
-                sortedFrames[frameIdx].second = qualityScore;
+                sortedFrames[frame].second = Frame(mat).estimateQuality();;
             }
         }
 
-        // Sort while preserving original indices
         std::stable_sort(sortedFrames.begin(), sortedFrames.end(),
                          [](const auto& a, const auto& b) {
-                             return a.second > b.second;  // Higher quality first
+                             return a.second > b.second;
                          });
 
-        // Update UI
         ui->frameSlider->setMinimum(0);
         ui->frameSlider->setMaximum(totalFrames - 1);
         ui->frameSlider->setValue(0);
+
         displayFrame(0);
     });
-}
-
-double StackPage::calculateFrameQuality(const cv::Mat& mat) {
-    cv::Mat gray, lap;
-    if (mat.channels() > 1) {
-        cv::cvtColor(mat, gray, cv::COLOR_BGR2GRAY);
-    } else {
-        gray = mat.clone();
-    }
-
-    cv::Laplacian(gray, lap, CV_64F);
-    cv::Scalar mu, sigma;
-    cv::meanStdDev(lap, mu, sigma);
-    return sigma[0] * sigma[0];  // Return variance as quality metric
-}
-
-QString StackPage::fileFilters() {
-    auto buildFilter = [](const QString &description, const QSet<QString> &extensions) {
-        QStringList patterns;
-        for (const QString &extension : extensions) {
-            patterns << "*" + extension;
-        }
-        return QString("%1 (%2)").arg(description, patterns.join(' '));
-    };
-
-    QString imageFilter = buildFilter("Image Files", imageExtensions);
-    QString videoFilter = buildFilter("Video Files", videoExtensions);
-
-    QSet<QString> allExtensions = imageExtensions + videoExtensions;
-    QString allFilter = buildFilter("All Supported Files", allExtensions);
-
-    return allFilter + ";;" + imageFilter + ";;" + videoFilter;
 }

@@ -57,6 +57,20 @@ cv::Mat Frame::crop(cv::Rect rect) {
     }
 }
 
+double Frame::estimateQuality() {
+    cv::Mat gray;
+    cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
+
+    cv::Mat gx, gy;
+    cv::Sobel(gray, gx, CV_64F, 1, 0, 3);
+    cv::Sobel(gray, gy, CV_64F, 0, 1, 3);
+
+    cv::Mat magnitude;
+    cv::magnitude(gx, gy, magnitude);
+
+    return cv::mean(magnitude)[0];
+}
+
 // Converts the image to grayscale and keeps it 3-channel.
 void Frame::convertToGray() {
     cv::cvtColor(image, image, cv::COLOR_BGR2GRAY);

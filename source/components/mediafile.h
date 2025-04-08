@@ -26,9 +26,9 @@ public:
     bool isVideo() const { return _isVideo; };
     unsigned int frames() const { return _frames; };
     cv::Size dimensions() const { return _dimensions; }
-    cv::Mat matAtFrame(unsigned int frame);
     std::string extension() const { return _extension; }
     std::string filename() const { return _filename; }
+    cv::Mat matAtFrame(int frame);
 
 private:
     cv::Mat image;

@@ -23,7 +23,7 @@ cv::Mat Preprocessor::preview(cv::Mat &frame, PreprocessingConfig &config) {
             cv::Point cropTextPos(crop.x, crop.y - 5);
             cv::putText(processed.mat(), "Crop", cropTextPos, cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0));
 
-            // Ccenter marker
+            // Center marker
             cv::Point cropCenter(crop.x + crop.width / 2, crop.y + crop.height / 2);
             cv::drawMarker(processed.mat(), cropCenter, cv::Scalar(0, 255, 0), cv::MARKER_CROSS, 15, 1);
         }

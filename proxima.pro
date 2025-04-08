@@ -12,6 +12,7 @@ SOURCES += \
     source/pages/preprocesspage/preprocesspage.cpp \
     source/pages/homepage/homepage.cpp \
     source/pages/processpage/processpage.cpp \
+    source/pages/stackpage/stacker.cpp \
     source/pages/stackpage/stackpage.cpp
 
 HEADERS += \
@@ -24,6 +25,7 @@ HEADERS += \
     source/pages/preprocesspage/preprocessor.h \
     source/pages/preprocesspage/preprocesspage.h \
     source/pages/processpage/processpage.h\
+    source/pages/stackpage/stacker.h \
     source/pages/stackpage/stackpage.h
 
 FORMS += \

@@ -31,7 +31,6 @@ private:
     std::unique_ptr<Display> display;
     int currentFrame = 0;
     void displayFrame(const int frameNumber);
-    std::tuple<int, int> findMediaFrame(const int frameNumber);
 
     // Selected files
     QStringList selectedFiles;

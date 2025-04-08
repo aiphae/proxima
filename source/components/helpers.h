@@ -4,7 +4,7 @@
 #include <QString>
 #include "mediafile.h"
 
-QString fileFilters() {
+inline QString fileFilters() {
     auto buildFilter = [](const QString &description, const QSet<QString> &extensions) {
         QStringList patterns;
         for (const QString &extension : extensions) {
@@ -20,6 +20,17 @@ QString fileFilters() {
     QString allFilter = buildFilter("All Supported Files", allExtensions);
 
     return allFilter + ";;" + imageFilter + ";;" + videoFilter;
+}
+
+inline std::pair<int, int> findMediaFrame(std::vector<MediaFile> &files, int frame) {
+    int currentFrame = 0;
+    for (int i = 0; i < files.size(); ++i) {
+        if (frame < currentFrame + files[i].frames()) {
+            return {i, frame - currentFrame};
+        }
+        currentFrame += files[i].frames();
+    }
+    return {files.size(), 0};
 }
 
 #endif // HELPERS_H
