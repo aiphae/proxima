@@ -147,7 +147,3 @@ std::vector<AlignmentPoint> Frame::getAps(cv::Mat frame, int apSize) {
     //     cv::erode(mask, mask, kernel);
     // }
 }
-
-cv::Point2f Frame::correlate(cv::Mat reference, cv::Mat frame) {
-    return cv::phaseCorrelate(reference, frame);
-}

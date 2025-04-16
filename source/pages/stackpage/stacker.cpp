@@ -1,6 +1,5 @@
 #include "stacker.h"
 #include "helpers.h"
-#include "frame.h"
 #include <opencv2/imgproc.hpp>
 #include <QDebug>
 
@@ -26,7 +25,7 @@ cv::Mat Stacker::stackGlobal() {
         cv::cvtColor(current, currentGray, cv::COLOR_BGR2GRAY);
         currentGray.convertTo(currentGray, CV_32F);
 
-        cv::Point2f shift = Frame::correlate(referenceGray, currentGray);
+        cv::Point2f shift = cv::phaseCorrelate(referenceGray, currentGray);
         cv::Mat M = (cv::Mat_<double>(2, 3) <<
             1, 0, -shift.x,
             0, 1, -shift.y
@@ -71,7 +70,7 @@ cv::Mat Stacker::stackLocal() {
         currentGray.convertTo(currentGray, CV_32F);
 
         // First, align the frame to the reference
-        cv::Point2f globalShift = Frame::correlate(referenceGray, currentGray);
+        cv::Point2f globalShift = cv::phaseCorrelate(referenceGray, currentGray);
         cv::Mat globalM = (cv::Mat_<double>(2, 3) <<
             1, 0, -globalShift.x,
             0, 1, -globalShift.y
@@ -88,7 +87,7 @@ cv::Mat Stacker::stackLocal() {
                 continue;
 
             // Then, align the corresponding patch
-            cv::Point2f localShift = Frame::correlate(referenceGray(roi), globalAligned(roi));
+            cv::Point2f localShift = cv::phaseCorrelate(referenceGray(roi), globalAligned(roi));
             cv::Mat localM = (cv::Mat_<double>(2, 3) <<
                 1, 0, -localShift.x,
                 0, 1, -localShift.y
