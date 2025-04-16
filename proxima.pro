@@ -3,6 +3,7 @@ QT += widgets core gui
 CONFIG += c++17
 
 SOURCES += \
+    source/components/alignmentpoint.cpp \
     source/components/display.cpp \
     source/components/frame.cpp \
     source/components/mediafile.cpp \
@@ -14,6 +15,7 @@ SOURCES += \
     source/pages/stackpage/stackpage.cpp
 
 HEADERS += \
+    source/components/alignmentpoint.h \
     source/components/display.h \
     source/components/frame.h \
     source/components/helpers.h \

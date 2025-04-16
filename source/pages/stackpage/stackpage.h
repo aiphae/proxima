@@ -40,7 +40,6 @@ private:
 
     // Stacking
     Stacker stacker;
-    StackingConfiguration config;
 };
 
 #endif // STACKPAGE_H

@@ -40,18 +40,19 @@ void StackPage::on_selectFilesPushButton_clicked() {
 
     updateUI();
 
-    config.width = mediaFiles[0].dimensions().width;
-    config.height = mediaFiles[0].dimensions().height;
+    stacker.width = mediaFiles[0].dimensions().width;
+    stacker.height = mediaFiles[0].dimensions().height;
 
     ui->totalFramesEdit->setText(QString::number(totalFrames));
     ui->frameSlider->setMinimum(0);
     ui->frameSlider->setMaximum(totalFrames - 1);
     ui->frameSlider->setValue(0);
 
-    sortedFrames.clear();
     for (int i = 0; i < totalFrames; ++i) {
         sortedFrames.emplace_back(i, 0.0);
     }
+
+    stacker.files = mediaFiles;
 
     displayFrame(0);
 }
@@ -63,17 +64,28 @@ void StackPage::displayFrame(const int frameNumber) {
 
     int index = sortedFrames[frameNumber].first;
     cv::Mat frame = getMatAtFrame(mediaFiles, index);
-
     if (frame.empty()) {
         return;
     }
 
-    cv::Mat cropped = Frame::cropOnObject(frame, config.width, config.height);
-    display->show(cropped);
+    frame = Frame::centerObject(frame, stacker.width, stacker.height);
+    display->show(frame);
 }
 
 void StackPage::on_estimateAPGridPushButton_clicked() {
+    cv::Mat reference = getMatAtFrame(mediaFiles, sortedFrames[0].first);
+    reference = Frame::centerObject(reference, stacker.width, stacker.height);
+    stacker.reference = reference;
 
+    int apSize = ui->apSixeSpinBox->value();
+    stacker.aps = Frame::getAps(reference, apSize);
+
+    // Preview alignment points
+    cv::Mat preview = reference.clone();
+    for (const auto &ap : stacker.aps) {
+        cv::rectangle(preview, ap.rect(), cv::Scalar(0, 255, 0), 1);
+    }
+    display->show(preview);
 }
 
 void StackPage::on_stackPushButton_clicked() {
@@ -81,19 +93,11 @@ void StackPage::on_stackPushButton_clicked() {
         return;
     }
 
-    int referenceIndex = sortedFrames[0].first;
-    cv::Mat reference = getMatAtFrame(mediaFiles, referenceIndex);
+    // Stack 20% of the best frames
+    stacker.framesToStack = totalFrames * 0.20;
 
-    if (reference.empty()) {
-        return;
-    }
+    cv::Mat stacked = stacker.stack();
 
-    reference = Frame::cropOnObject(reference, config.width, config.height);
-
-    StackingSource source{reference, mediaFiles, sortedFrames};
-    config.frames = totalFrames * 0.2;
-
-    cv::Mat stacked = stacker.stack(source, config);
     display->show(stacked);
     cv::imwrite("output.tif", stacked);
 }
@@ -105,12 +109,12 @@ void StackPage::connectUI() {
     });
 
     connect(ui->widthSpinBox, &QSpinBox::editingFinished, [this]() {
-        config.width = ui->widthSpinBox->value();
+        stacker.width = ui->widthSpinBox->value();
         displayFrame(currentFrame);
     });
 
     connect(ui->heightSpinBox, &QSpinBox::editingFinished, [this]() {
-        config.height = ui->heightSpinBox->value();
+        stacker.height = ui->heightSpinBox->value();
         displayFrame(currentFrame);
     });
 
@@ -122,10 +126,16 @@ void StackPage::connectUI() {
         for (int frame = 0; frame < totalFrames; ++frame) {
             cv::Mat mat = getMatAtFrame(mediaFiles, frame);
             sortedFrames[frame].second = mat.empty() ? 0.0 : Frame::estimateQuality(mat);
+
+            ui->analyzingProgressEdit->setText(QString::number(frame + 1) + "/" + QString::number(totalFrames));
+            QCoreApplication::processEvents();
         }
 
         std::stable_sort(sortedFrames.begin(), sortedFrames.end(),
             [](const auto& a, const auto& b) { return a.second > b.second; });
+
+        stacker.reference = getMatAtFrame(mediaFiles, sortedFrames[0].first);
+        stacker.sorted = sortedFrames;
 
         ui->frameSlider->setValue(0);
         displayFrame(0);

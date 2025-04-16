@@ -129,6 +129,15 @@
              <height>30</height>
             </size>
            </property>
+           <property name="minimum">
+            <number>1</number>
+           </property>
+           <property name="maximum">
+            <number>500</number>
+           </property>
+           <property name="value">
+            <number>24</number>
+           </property>
           </widget>
          </item>
          <item row="1" column="0">
@@ -148,6 +157,16 @@
            </property>
            <property name="text">
             <string>Estimate AP grid</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="0" colspan="2">
+          <widget class="QCheckBox" name="localAlignmentCheckBox">
+           <property name="text">
+            <string>Local alignment</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
            </property>
           </widget>
          </item>
@@ -221,7 +240,7 @@
       <item row="4" column="0">
        <widget class="QGroupBox" name="stackOptionsGroupBox">
         <property name="title">
-         <string>Stack options</string>
+         <string>Stacking</string>
         </property>
         <property name="flat">
          <bool>true</bool>
@@ -323,7 +342,21 @@
          <bool>true</bool>
         </property>
         <layout class="QGridLayout" name="gridLayout_5">
-         <item row="0" column="0">
+         <item row="1" column="0">
+          <widget class="QLabel" name="analyzingProgressLabel">
+           <property name="text">
+            <string>Progress:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QLabel" name="analyzingProgressEdit">
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="0" colspan="2">
           <widget class="QPushButton" name="analyzeFramesPushButton">
            <property name="minimumSize">
             <size>
