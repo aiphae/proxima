@@ -78,7 +78,8 @@ void StackPage::on_estimateAPGridPushButton_clicked() {
     stacker.reference = reference;
 
     int apSize = ui->apSixeSpinBox->value();
-    stacker.aps = Frame::getAps(reference, apSize);
+    APPlacement placement = ui->featureBasedApPlacement->isChecked() ? APPlacement::FeatureBased : APPlacement::Uniform;
+    stacker.aps = Frame::getAps(reference, apSize, placement);
 
     // Preview alignment points
     cv::Mat preview = reference.clone();
