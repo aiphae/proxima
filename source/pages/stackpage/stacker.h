@@ -7,20 +7,25 @@
 
 class Stacker {
 public:
-    cv::Mat stack();
+    struct Source {
+        std::vector<MediaFile> files;
+        std::vector<std::pair<int, double>> sorted;
+    };
 
-    int framesToStack;
-    int width;
-    int height;
+    struct Config {
+        int framesToStack;
+        int outputWidth;
+        int outputHeight;
 
-    cv::Mat reference;
-    std::vector<MediaFile> files;
-    std::vector<std::pair<int, double>> sorted;
-    std::vector<AlignmentPoint> aps;
+        bool localAlign;
+        std::vector<AlignmentPoint> aps;
+    };
+
+    static cv::Mat stack(Source &source, Config &config);
 
 private:
-    cv::Mat stackGlobal();
-    cv::Mat stackLocal();
+    static cv::Mat stackGlobal(Source &source, Config &config);
+    static cv::Mat stackLocal(Source &source, Config &config);
 };
 
 #endif // STACKER_H

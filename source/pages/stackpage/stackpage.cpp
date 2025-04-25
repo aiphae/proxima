@@ -1,8 +1,9 @@
 #include "stackpage.h"
 #include "ui_stackpage.h"
-#include <QFileDialog>
 #include "helpers.h"
 #include "frame.h"
+#include <QFileDialog>
+#include "threadpool.h"
 
 StackPage::StackPage(QWidget *parent)
     : QWidget(parent)
@@ -24,83 +25,111 @@ void StackPage::on_selectFilesPushButton_clicked() {
     }
 
     totalFrames = 0;
-    mediaFiles.clear();
-    sortedFrames.clear();
+    source.files.clear();
+    source.sorted.clear();
 
     for (const QString &file : files) {
         if (MediaFile media(file); media.isValid()) {
-            mediaFiles.emplace_back(std::move(media));
-            totalFrames += mediaFiles.back().frames();
+            source.files.emplace_back(file);
+            totalFrames += source.files.back().frames();
         }
     }
 
-    if (mediaFiles.empty()) {
+    if (source.files.empty()) {
         return;
     }
 
     updateUI();
 
-    stacker.width = mediaFiles[0].dimensions().width;
-    stacker.height = mediaFiles[0].dimensions().height;
+    config.outputWidth = source.files[0].dimensions().width;
+    config.outputHeight = source.files[0].dimensions().height;
 
     ui->totalFramesEdit->setText(QString::number(totalFrames));
     ui->frameSlider->setMinimum(0);
     ui->frameSlider->setMaximum(totalFrames - 1);
     ui->frameSlider->setValue(0);
 
+    source.sorted.resize(totalFrames);
     for (int i = 0; i < totalFrames; ++i) {
-        sortedFrames.emplace_back(i, 0.0);
+        source.sorted[i] = {i, 0.0};
     }
-
-    stacker.files = mediaFiles;
 
     displayFrame(0);
 }
 
 void StackPage::displayFrame(const int frameNumber) {
-    if (mediaFiles.empty()) {
+    if (source.files.empty()) {
         return;
     }
 
-    int index = sortedFrames[frameNumber].first;
-    cv::Mat frame = getMatAtFrame(mediaFiles, index);
+    int index = source.sorted[frameNumber].first;
+    cv::Mat frame = getMatAtFrame(source.files, index);
     if (frame.empty()) {
         return;
     }
 
-    frame = Frame::centerObject(frame, stacker.width, stacker.height);
+    frame = Frame::centerObject(frame, config.outputWidth, config.outputHeight);
     display->show(frame);
 }
 
 void StackPage::on_estimateAPGridPushButton_clicked() {
-    cv::Mat reference = getMatAtFrame(mediaFiles, sortedFrames[0].first);
-    reference = Frame::centerObject(reference, stacker.width, stacker.height);
-    stacker.reference = reference;
+    cv::Mat reference = getMatAtFrame(source.files, source.sorted[0].first);
+    reference = Frame::centerObject(reference, config.outputWidth, config.outputHeight);
 
     int apSize = ui->apSixeSpinBox->value();
     APPlacement placement = ui->featureBasedApPlacement->isChecked() ? APPlacement::FeatureBased : APPlacement::Uniform;
-    stacker.aps = Frame::getAps(reference, apSize, placement);
+    config.aps = Frame::getAps(reference, apSize, placement);
 
     // Preview alignment points
     cv::Mat preview = reference.clone();
-    for (const auto &ap : stacker.aps) {
+    for (const auto &ap : config.aps) {
         cv::rectangle(preview, ap.rect(), cv::Scalar(0, 255, 0), 1);
     }
     display->show(preview);
 }
 
 void StackPage::on_stackPushButton_clicked() {
-    if (mediaFiles.empty() || sortedFrames.empty()) {
+    if (source.files.empty() || source.sorted.empty()) {
         return;
     }
 
     // Stack 20% of the best frames
-    stacker.framesToStack = totalFrames * 0.20;
+    config.framesToStack = totalFrames * 0.20;
 
-    cv::Mat stacked = stacker.stack();
+    cv::Mat stacked = Stacker::stack(source, config);
 
     display->show(stacked);
     cv::imwrite("output.tif", stacked);
+}
+
+void StackPage::analyzeFrames() {
+    if (source.files.empty() || source.sorted.empty()) {
+        return;
+    }
+
+    std::shared_ptr<std::atomic<int>> framesAnalyzed = std::make_shared<std::atomic<int>>();
+
+    std::thread([this, framesAnalyzed]() {
+        // Producer thread
+        {
+            ThreadPool pool(std::thread::hardware_concurrency() - 2); // Leave 1 for GUI and 1 for producer
+            *framesAnalyzed = 0;
+            for (int i = 0; i < totalFrames; ++i) {
+                int index = i;
+                pool.enqueue([index, this, framesAnalyzed]() mutable {
+                    cv::Mat frame = getMatAtFrame(source.files, index);
+                    double quality = Frame::estimateQuality(frame);
+                    source.sorted[index].first = index;
+                    source.sorted[index].second = quality;
+                    int done = ++(*framesAnalyzed);
+                    emit sortingProgressUpdated(done);
+                });
+            }
+            // Thread pool's destructor is called here,
+            // waiting for workers to complete their work
+        }
+        emit analyzingComplete();
+    }).detach();
 }
 
 void StackPage::connectUI() {
@@ -110,34 +139,27 @@ void StackPage::connectUI() {
     });
 
     connect(ui->widthSpinBox, &QSpinBox::editingFinished, [this]() {
-        stacker.width = ui->widthSpinBox->value();
+        config.outputWidth = ui->widthSpinBox->value();
         displayFrame(currentFrame);
     });
 
     connect(ui->heightSpinBox, &QSpinBox::editingFinished, [this]() {
-        stacker.height = ui->heightSpinBox->value();
+        config.outputHeight = ui->heightSpinBox->value();
         displayFrame(currentFrame);
     });
 
     connect(ui->analyzeFramesPushButton, &QPushButton::clicked, this, [this]() {
-        if (mediaFiles.empty()) {
-            return;
-        }
+        analyzeFrames();
+    });
 
-        for (int frame = 0; frame < totalFrames; ++frame) {
-            cv::Mat mat = getMatAtFrame(mediaFiles, frame);
-            sortedFrames[frame].second = mat.empty() ? 0.0 : Frame::estimateQuality(mat);
+    connect(this, &StackPage::sortingProgressUpdated, this, [this](int current) {
+        ui->analyzingProgressEdit->setText(QString::number(current) + "/" + QString::number(totalFrames));
+    });
 
-            ui->analyzingProgressEdit->setText(QString::number(frame + 1) + "/" + QString::number(totalFrames));
-            QCoreApplication::processEvents();
-        }
-
-        std::stable_sort(sortedFrames.begin(), sortedFrames.end(),
-            [](const auto& a, const auto& b) { return a.second > b.second; });
-
-        stacker.reference = getMatAtFrame(mediaFiles, sortedFrames[0].first);
-        stacker.sorted = sortedFrames;
-
+    connect(this, &StackPage::analyzingComplete, this, [this]() {
+        std::sort(source.sorted.begin(), source.sorted.end(),
+                  [](const auto &a, const auto &b) { return a.second > b.second; }
+                  );
         ui->frameSlider->setValue(0);
         displayFrame(0);
     });
@@ -145,10 +167,10 @@ void StackPage::connectUI() {
 
 void StackPage::updateUI() {
     ui->widthSpinBox->blockSignals(true);
-    ui->widthSpinBox->setValue(mediaFiles[0].dimensions().width);
+    ui->widthSpinBox->setValue(source.files[0].dimensions().width);
     ui->widthSpinBox->blockSignals(false);
 
     ui->heightSpinBox->blockSignals(true);
-    ui->heightSpinBox->setValue(mediaFiles[0].dimensions().height);
+    ui->heightSpinBox->setValue(source.files[0].dimensions().height);
     ui->heightSpinBox->blockSignals(false);
 }

@@ -2,7 +2,7 @@
 #define STACKPAGE_H
 
 #include <QWidget>
-#include "mediafile.h"
+#include <QFutureWatcher>
 #include "display.h"
 #include "stacker.h"
 
@@ -22,6 +22,10 @@ private slots:
     void on_estimateAPGridPushButton_clicked();
     void on_stackPushButton_clicked();
 
+signals:
+    void sortingProgressUpdated(int current);
+    void analyzingComplete();
+
 private:
     // UI
     Ui::StackPage *ui;
@@ -33,13 +37,12 @@ private:
     void displayFrame(const int frameNumber);
     int currentFrame = 0;
 
-    // Media files
-    std::vector<MediaFile> mediaFiles;
-    std::vector<std::pair<int, double>> sortedFrames;
-    int totalFrames = 0;
-
     // Stacking
-    Stacker stacker;
+    Stacker::Config config;
+    Stacker::Source source;
+
+    int totalFrames = 0;
+    void analyzeFrames();
 };
 
 #endif // STACKPAGE_H

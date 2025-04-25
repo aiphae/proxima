@@ -1,13 +1,15 @@
 #include "stacker.h"
 #include "helpers.h"
-#include <opencv2/imgproc.hpp>
 #include "frame.h"
+#include <opencv2/imgproc.hpp>
 
-cv::Mat Stacker::stack() {
-    return aps.empty() ? stackGlobal() : stackLocal();
+cv::Mat Stacker::stack(Source &source, Config &config) {
+    return config.localAlign ? stackLocal(source, config) : stackGlobal(source, config);
 }
 
-cv::Mat Stacker::stackGlobal() {
+cv::Mat Stacker::stackGlobal(Source &source, Config &config) {
+    cv::Mat reference = getMatAtFrame(source.files, source.sorted[0].first);
+
     cv::Mat accumulator = cv::Mat::zeros(reference.size(), CV_32FC3);
     double weights = 0.0;
 
@@ -15,13 +17,13 @@ cv::Mat Stacker::stackGlobal() {
     cv::cvtColor(reference, referenceGray, cv::COLOR_BGR2GRAY);
     referenceGray.convertTo(referenceGray, CV_32F);
 
-    for (int i = 1; i < framesToStack; ++i) {
-        double frameWeight = sorted[i].second;
-
-        cv::Mat current = getMatAtFrame(files, sorted[i].first);
+    for (int i = 0; i < config.framesToStack; ++i) {
+        cv::Mat current = getMatAtFrame(source.files, source.sorted[i].first);
         if (current.empty()) {
             continue;
         }
+
+        double frameWeight = source.sorted[i].second;
 
         cv::Mat currentGray;
         cv::cvtColor(current, currentGray, cv::COLOR_BGR2GRAY);
@@ -54,7 +56,9 @@ cv::Mat Stacker::stackGlobal() {
     return result;
 }
 
-cv::Mat Stacker::stackLocal() {
+cv::Mat Stacker::stackLocal(Source &source, Config &config) {
+    cv::Mat reference = getMatAtFrame(source.files, source.sorted[0].first);
+
     cv::Mat accumulator = cv::Mat::zeros(reference.size(), CV_32FC3);
     cv::Mat weights = cv::Mat::zeros(reference.size(), CV_32F);
 
@@ -62,8 +66,8 @@ cv::Mat Stacker::stackLocal() {
     cv::cvtColor(reference, referenceGray, cv::COLOR_BGR2GRAY);
     referenceGray.convertTo(referenceGray, CV_32F);
 
-    for (int i = 1; i < framesToStack; ++i) {
-        cv::Mat current = getMatAtFrame(files, sorted[i].first);
+    for (int i = 1; i < config.framesToStack; ++i) {
+        cv::Mat current = getMatAtFrame(source.files, source.sorted[i].first);
         if (current.empty()) {
             continue;
         }
@@ -83,11 +87,11 @@ cv::Mat Stacker::stackLocal() {
         cv::warpAffine(currentGray, globalAlignedGray, globalM, current.size(), cv::INTER_LANCZOS4);
 
         // Weight based on frame quality so higher-quality frames impact more
-        float frameWeight = sorted[i].second;
+        float frameWeight = source.sorted[i].second;
         // Padding to extract a larger ROI for more precise interpolation
         constexpr int padding = 5;
 
-        for (const auto &ap : aps) {
+        for (const auto &ap : config.aps) {
             cv::Rect roi = ap.rect() & cv::Rect(0, 0, accumulator.cols, accumulator.rows);
 
             // Extended ROI to support interpolation
@@ -135,7 +139,7 @@ cv::Mat Stacker::stackLocal() {
         }
     }
 
-    cv::Mat stackedGlobal = stackGlobal();
+    cv::Mat stackedGlobal = stackGlobal(source, config);
     stackedGlobal.convertTo(stackedGlobal, CV_32FC3);
     cv::Mat result = cv::Mat::zeros(accumulator.size(), CV_32FC3);
 
