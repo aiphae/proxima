@@ -28,6 +28,7 @@ MediaFile::MediaFile(const QString &filename) {
 
 cv::Mat MediaFile::matAtFrame(int frame) {
     if (_isVideo) {
+        std::lock_guard<std::mutex> lock(videoMutex);
         video.set(cv::CAP_PROP_POS_FRAMES, frame);
         cv::Mat mat;
         if (video.read(mat)) {
@@ -45,4 +46,31 @@ MediaFile::~MediaFile() {
     if (_isVideo) {
         video.release();
     }
+}
+
+MediaFile::MediaFile(MediaFile&& other) noexcept {
+    image = std::move(other.image);
+    video = std::move(other.video);
+    _isValid = other._isValid;
+    _isVideo = other._isVideo;
+    _frames = other._frames;
+    _dimensions = other._dimensions;
+    _extension = std::move(other._extension);
+    _filename = std::move(other._filename);
+    // Note: don't move std::mutex — construct a new one
+}
+
+MediaFile& MediaFile::operator=(MediaFile&& other) noexcept {
+    if (this != &other) {
+        image = std::move(other.image);
+        video = std::move(other.video);
+        _isValid = other._isValid;
+        _isVideo = other._isVideo;
+        _frames = other._frames;
+        _dimensions = other._dimensions;
+        _extension = std::move(other._extension);
+        _filename = std::move(other._filename);
+        // mutex — construct a new one
+    }
+    return *this;
 }

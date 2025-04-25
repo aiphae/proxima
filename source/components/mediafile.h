@@ -30,6 +30,12 @@ public:
     std::string filename() const { return _filename; }
     cv::Mat matAtFrame(int frame);
 
+    MediaFile(MediaFile&& other) noexcept;
+    MediaFile& operator=(MediaFile&& other) noexcept;
+
+    MediaFile(const MediaFile&) = delete;
+    MediaFile& operator=(const MediaFile&) = delete;
+
 private:
     cv::Mat image;
     cv::VideoCapture video;
@@ -40,6 +46,8 @@ private:
     cv::Size _dimensions = {0, 0};
     std::string _extension;
     std::string _filename;
+
+    std::mutex videoMutex;
 };
 
 #endif // MEDIAFILE_H
