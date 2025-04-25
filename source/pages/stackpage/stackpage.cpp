@@ -116,7 +116,7 @@ void StackPage::analyzeFrames() {
             *framesAnalyzed = 0;
             for (int i = 0; i < totalFrames; ++i) {
                 int index = i;
-                pool.enqueue([index, this, framesAnalyzed]() mutable {
+                pool.enqueue([index, this, framesAnalyzed]() {
                     cv::Mat frame = getMatAtFrame(source.files, index);
                     double quality = Frame::estimateQuality(frame);
                     source.sorted[index].first = index;
