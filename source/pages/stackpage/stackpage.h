@@ -3,8 +3,8 @@
 
 #include <QWidget>
 #include <QFutureWatcher>
-#include "display.h"
-#include "stacker.h"
+#include "components/display.h"
+#include "modules/stacker.h"
 
 namespace Ui {
 class StackPage;
@@ -24,13 +24,14 @@ private slots:
 
 signals:
     void sortingProgressUpdated(int current);
-    void analyzingComplete();
+    void analyzingCompleted();
 
 private:
     // UI
     Ui::StackPage *ui;
     void connectUI();
     void updateUI();
+    void enableUI();
 
     // Display
     std::unique_ptr<Display> display;

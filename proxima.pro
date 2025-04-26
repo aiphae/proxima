@@ -1,4 +1,4 @@
-QT += widgets core gui concurrent
+QT += widgets core gui
 
 CONFIG += c++17
 
@@ -10,9 +10,9 @@ SOURCES += \
     source/concurrency/threadpool.cpp \
     source/main.cpp \
     source/mainwindow/mainwindow.cpp \
+    source/modules/stacker.cpp \
     source/pages/homepage/homepage.cpp \
     source/pages/processpage/processpage.cpp \
-    source/pages/stackpage/stacker.cpp \
     source/pages/stackpage/stackpage.cpp
 
 HEADERS += \
@@ -23,9 +23,9 @@ HEADERS += \
     source/components/mediafile.h \
     source/concurrency/threadpool.h \
     source/mainwindow/mainwindow.h \
+    source/modules/stacker.h \
     source/pages/homepage/homepage.h \
     source/pages/processpage/processpage.h\
-    source/pages/stackpage/stacker.h \
     source/pages/stackpage/stackpage.h
 
 FORMS += \
@@ -35,10 +35,8 @@ FORMS += \
     source/pages/stackpage/stackpage.ui
 
 INCLUDEPATH += \
-    source/mainwindow \
-    source/pages/ \
-    source/components \
-    source/concurrency
+    source \
+    source/pages
 
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin

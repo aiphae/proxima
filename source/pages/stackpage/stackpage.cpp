@@ -1,9 +1,9 @@
 #include "stackpage.h"
 #include "ui_stackpage.h"
-#include "helpers.h"
-#include "frame.h"
+#include "components/helpers.h"
+#include "components/frame.h"
+#include "concurrency/threadpool.h"
 #include <QFileDialog>
-#include "threadpool.h"
 
 StackPage::StackPage(QWidget *parent)
     : QWidget(parent)
@@ -54,6 +54,8 @@ void StackPage::on_selectFilesPushButton_clicked() {
         source.sorted[i] = {i, 0.0};
     }
 
+    ui->analyzingGroupBox->setEnabled(true);
+
     displayFrame(0);
 }
 
@@ -76,9 +78,18 @@ void StackPage::on_estimateAPGridPushButton_clicked() {
     cv::Mat reference = getMatAtFrame(source.files, source.sorted[0].first);
     reference = Frame::centerObject(reference, config.outputWidth, config.outputHeight);
 
-    int apSize = ui->apSixeSpinBox->value();
+    int apSize = ui->apSizeSpinBox->value();
     APPlacement placement = ui->featureBasedApPlacement->isChecked() ? APPlacement::FeatureBased : APPlacement::Uniform;
     config.aps = Frame::getAps(reference, apSize, placement);
+
+    QString text;
+    if (config.aps.size() > 0) {
+        text = QString::number(config.aps.size());
+    }
+    else {
+        text = text = "<font color='red'>No APs detected!</font>";
+    }
+    ui->apAmountEdit->setText(text);
 
     // Preview alignment points
     cv::Mat preview = reference.clone();
@@ -93,13 +104,27 @@ void StackPage::on_stackPushButton_clicked() {
         return;
     }
 
-    // Stack 20% of the best frames
-    config.framesToStack = totalFrames * 0.20;
+    std::string outputDir = QFileDialog::getExistingDirectory().toStdString();
+    qDebug() << outputDir;
+    if (outputDir.empty()) {
+        return;
+    }
 
-    cv::Mat stacked = Stacker::stack(source, config);
+    std::vector<QSpinBox *> spinBoxes {
+        ui->percentToStackSpinBox1, ui->percentToStackSpinBox2, ui->percentToStackSpinBox3,
+        ui->percentToStackSpinBox4, ui->percentToStackSpinBox5
+    };
 
-    display->show(stacked);
-    cv::imwrite("output.tif", stacked);
+    for (auto &spinBox : spinBoxes) {
+        int percent = spinBox->value();
+        if (percent < 1) {
+            continue;
+        }
+        config.framesToStack = totalFrames * percent / 100;
+        cv::Mat stacked = Stacker::stack(source, config);
+        std::string filename = outputDir + "/proxima-stacked-" + std::to_string(percent) + ".tif";
+        cv::imwrite(filename, stacked);
+    }
 }
 
 void StackPage::analyzeFrames() {
@@ -107,29 +132,39 @@ void StackPage::analyzeFrames() {
         return;
     }
 
-    std::shared_ptr<std::atomic<int>> framesAnalyzed = std::make_shared<std::atomic<int>>();
+    // Counter of processed frames
+    // 'shared_ptr' because otherwise it would be destroyed after 'thread.detach()'
+    std::shared_ptr<std::atomic<int>> framesAnalyzed = std::make_shared<std::atomic<int>>(0);
 
+    // Analyze frames concurrently
     std::thread([this, framesAnalyzed]() {
         // Producer thread
         {
             ThreadPool pool(std::thread::hardware_concurrency() - 2); // Leave 1 for GUI and 1 for producer
-            *framesAnalyzed = 0;
             for (int i = 0; i < totalFrames; ++i) {
-                int index = i;
-                pool.enqueue([index, this, framesAnalyzed]() {
-                    cv::Mat frame = getMatAtFrame(source.files, index);
-                    double quality = Frame::estimateQuality(frame);
-                    source.sorted[index].first = index;
-                    source.sorted[index].second = quality;
+                pool.enqueue([i, this, framesAnalyzed]() {
+                    cv::Mat frame = getMatAtFrame(source.files, i);
+                    source.sorted[i].first = i;
+                    source.sorted[i].second = Frame::estimateQuality(frame);
                     int done = ++(*framesAnalyzed);
+                    // Emit signal to update progress bar from the main thread
                     emit sortingProgressUpdated(done);
                 });
             }
             // Thread pool's destructor is called here,
             // waiting for workers to complete their work
         }
-        emit analyzingComplete();
+        // Emit the signal to the main thread
+        emit analyzingCompleted();
     }).detach();
+}
+
+void StackPage::enableUI() {
+    ui->alignmentGroupBox->setEnabled(true);
+    ui->stackOptionsGroupBox->setEnabled(true);
+    ui->outputOptionsGroupBox->setEnabled(true);
+    ui->advancedOptionsGroupBox->setEnabled(true);
+    ui->processingGroupBox->setEnabled(true);
 }
 
 void StackPage::connectUI() {
@@ -156,12 +191,17 @@ void StackPage::connectUI() {
         ui->analyzingProgressEdit->setText(QString::number(current) + "/" + QString::number(totalFrames));
     });
 
-    connect(this, &StackPage::analyzingComplete, this, [this]() {
+    connect(this, &StackPage::analyzingCompleted, this, [this]() {
         std::sort(source.sorted.begin(), source.sorted.end(),
                   [](const auto &a, const auto &b) { return a.second > b.second; }
-                  );
+        );
+        enableUI();
         ui->frameSlider->setValue(0);
         displayFrame(0);
+    });
+
+    connect(ui->localAlignmentCheckBox, &QCheckBox::checkStateChanged, this, [this](Qt::CheckState state) {
+        ui->localAlignmentFrame->setEnabled(state == Qt::Checked);
     });
 }
 
