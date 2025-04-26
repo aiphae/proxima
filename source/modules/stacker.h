@@ -2,8 +2,8 @@
 #define STACKER_H
 
 #include <opencv2/opencv.hpp>
-#include "mediafile.h"
-#include "alignmentpoint.h"
+#include "components/mediafile.h"
+#include "components/alignmentpoint.h"
 
 class Stacker {
 public:

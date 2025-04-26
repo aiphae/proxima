@@ -1,6 +1,6 @@
 #include "stacker.h"
-#include "helpers.h"
-#include "frame.h"
+#include "components/helpers.h"
+#include "components/frame.h"
 #include <opencv2/imgproc.hpp>
 
 cv::Mat Stacker::stack(Source &source, Config &config) {
@@ -156,5 +156,6 @@ cv::Mat Stacker::stackLocal(Source &source, Config &config) {
     }
 
     result.convertTo(result, CV_8UC3);
+
     return result;
 }
