@@ -25,33 +25,33 @@ void StackPage::on_selectFilesPushButton_clicked() {
     }
 
     totalFrames = 0;
-    source.files.clear();
-    source.sorted.clear();
+    stacker.source.files.clear();
+    stacker.source.sorted.clear();
 
     for (const QString &file : files) {
         if (MediaFile media(file); media.isValid()) {
-            source.files.emplace_back(file);
-            totalFrames += source.files.back().frames();
+            stacker.source.files.emplace_back(file);
+            totalFrames += stacker.source.files.back().frames();
         }
     }
 
-    if (source.files.empty()) {
+    if (stacker.source.files.empty()) {
         return;
     }
 
     updateUI();
 
-    config.outputWidth = source.files[0].dimensions().width;
-    config.outputHeight = source.files[0].dimensions().height;
+    stacker.config.outputWidth = stacker.source.files[0].dimensions().width;
+    stacker.config.outputHeight = stacker.source.files[0].dimensions().height;
 
     ui->totalFramesEdit->setText(QString::number(totalFrames));
     ui->frameSlider->setMinimum(0);
     ui->frameSlider->setMaximum(totalFrames - 1);
     ui->frameSlider->setValue(0);
 
-    source.sorted.resize(totalFrames);
+    stacker.source.sorted.resize(totalFrames);
     for (int i = 0; i < totalFrames; ++i) {
-        source.sorted[i] = {i, 0.0};
+        stacker.source.sorted[i] = {i, 0.0};
     }
 
     ui->analyzingGroupBox->setEnabled(true);
@@ -60,31 +60,31 @@ void StackPage::on_selectFilesPushButton_clicked() {
 }
 
 void StackPage::displayFrame(const int frameNumber) {
-    if (source.files.empty()) {
+    if (stacker.source.files.empty()) {
         return;
     }
 
-    int index = source.sorted[frameNumber].first;
-    cv::Mat frame = getMatAtFrame(source.files, index);
+    int index = stacker.source.sorted[frameNumber].first;
+    cv::Mat frame = getMatAtFrame(stacker.source.files, index);
     if (frame.empty()) {
         return;
     }
 
-    frame = Frame::centerObject(frame, config.outputWidth, config.outputHeight);
+    frame = Frame::centerObject(frame, stacker.config.outputWidth, stacker.config.outputHeight);
     display->show(frame);
 }
 
 void StackPage::on_estimateAPGridPushButton_clicked() {
-    cv::Mat reference = getMatAtFrame(source.files, source.sorted[0].first);
-    reference = Frame::centerObject(reference, config.outputWidth, config.outputHeight);
+    cv::Mat reference = getMatAtFrame(stacker.source.files, stacker.source.sorted[0].first);
+    reference = Frame::centerObject(reference, stacker.config.outputWidth, stacker.config.outputHeight);
 
     int apSize = ui->apSizeSpinBox->value();
     APPlacement placement = ui->featureBasedApPlacement->isChecked() ? APPlacement::FeatureBased : APPlacement::Uniform;
-    config.aps = Frame::getAps(reference, apSize, placement);
+    stacker.config.aps = Frame::getAps(reference, apSize, placement);
 
     QString text;
-    if (config.aps.size() > 0) {
-        text = QString::number(config.aps.size());
+    if (stacker.config.aps.size() > 0) {
+        text = QString::number(stacker.config.aps.size());
     }
     else {
         text = text = "<font color='red'>No APs detected!</font>";
@@ -93,14 +93,14 @@ void StackPage::on_estimateAPGridPushButton_clicked() {
 
     // Preview alignment points
     cv::Mat preview = reference.clone();
-    for (const auto &ap : config.aps) {
+    for (const auto &ap : stacker.config.aps) {
         cv::rectangle(preview, ap.rect(), cv::Scalar(0, 255, 0), 1);
     }
     display->show(preview);
 }
 
 void StackPage::on_stackPushButton_clicked() {
-    if (source.files.empty() || source.sorted.empty()) {
+    if (stacker.source.files.empty() || stacker.source.sorted.empty()) {
         return;
     }
 
@@ -114,20 +114,29 @@ void StackPage::on_stackPushButton_clicked() {
         ui->percentToStackSpinBox4, ui->percentToStackSpinBox5
     };
 
-    for (auto &spinBox : spinBoxes) {
-        int percent = spinBox->value();
-        if (percent < 1) {
-            continue;
+    std::thread([this, spinBoxes, outputDir]() {
+        for (auto &spinBox : spinBoxes) {
+            int percent = spinBox->value();
+            if (percent < 1) {
+                continue;
+            }
+            stacker.config.framesToStack = totalFrames * percent / 100;
+
+            ui->statusEdit->setText(QString("Stacking %1%").arg(percent));
+
+            cv::Mat stacked = stacker.stack();
+            std::string filename = outputDir + "/proxima-stacked-" + std::to_string(percent) + ".tif";
+            cv::imwrite(filename, stacked);
         }
-        config.framesToStack = totalFrames * percent / 100;
-        cv::Mat stacked = Stacker::stack(source, config);
-        std::string filename = outputDir + "/proxima-stacked-" + std::to_string(percent) + ".tif";
-        cv::imwrite(filename, stacked);
-    }
+
+        QMetaObject::invokeMethod(this, [this]() {
+            ui->statusEdit->setText("Done!");
+        });
+    }).detach();
 }
 
 void StackPage::analyzeFrames() {
-    if (source.files.empty() || source.sorted.empty()) {
+    if (stacker.source.files.empty() || stacker.source.sorted.empty()) {
         return;
     }
 
@@ -142,9 +151,9 @@ void StackPage::analyzeFrames() {
             ThreadPool pool(std::thread::hardware_concurrency() - 2); // Leave 1 for GUI and 1 for producer
             for (int i = 0; i < totalFrames; ++i) {
                 pool.enqueue([i, this, framesAnalyzed]() {
-                    cv::Mat frame = getMatAtFrame(source.files, i);
-                    source.sorted[i].first = i;
-                    source.sorted[i].second = Frame::estimateQuality(frame);
+                    cv::Mat frame = getMatAtFrame(stacker.source.files, i);
+                    stacker.source.sorted[i].first = i;
+                    stacker.source.sorted[i].second = Frame::estimateQuality(frame);
                     int done = ++(*framesAnalyzed);
                     // Emit signal to update progress bar from the main thread
                     emit sortingProgressUpdated(done);
@@ -158,7 +167,7 @@ void StackPage::analyzeFrames() {
     }).detach();
 }
 
-void StackPage::enableUI() {
+void StackPage::enableConfigEdit() {
     ui->alignmentGroupBox->setEnabled(true);
     ui->stackOptionsGroupBox->setEnabled(true);
     ui->outputOptionsGroupBox->setEnabled(true);
@@ -173,12 +182,12 @@ void StackPage::connectUI() {
     });
 
     connect(ui->widthSpinBox, &QSpinBox::editingFinished, [this]() {
-        config.outputWidth = ui->widthSpinBox->value();
+        stacker.config.outputWidth = ui->widthSpinBox->value();
         displayFrame(currentFrame);
     });
 
     connect(ui->heightSpinBox, &QSpinBox::editingFinished, [this]() {
-        config.outputHeight = ui->heightSpinBox->value();
+        stacker.config.outputHeight = ui->heightSpinBox->value();
         displayFrame(currentFrame);
     });
 
@@ -191,17 +200,17 @@ void StackPage::connectUI() {
     });
 
     connect(this, &StackPage::analyzingCompleted, this, [this]() {
-        std::sort(source.sorted.begin(), source.sorted.end(),
-                  [](const auto &a, const auto &b) { return a.second > b.second; }
+        std::sort(stacker.source.sorted.begin(), stacker.source.sorted.end(),
+            [](const auto &a, const auto &b) { return a.second > b.second; }
         );
-        enableUI();
+        enableConfigEdit();
         ui->frameSlider->setValue(0);
         displayFrame(0);
     });
 
     connect(ui->localAlignmentCheckBox, &QCheckBox::checkStateChanged, this, [this](Qt::CheckState state) {
         ui->localAlignmentFrame->setEnabled(state == Qt::Checked);
-        config.localAlign = (state == Qt::Checked);
+        stacker.config.localAlign = (state == Qt::Checked);
         displayFrame(currentFrame);
     });
 
@@ -212,23 +221,27 @@ void StackPage::connectUI() {
         ui->drizzle2_0xRadioButton->setEnabled(checked);
 
         if (!checked) {
-            config.drizzle = 1.0;
+            stacker.config.drizzle = 1.0;
         }
         else if (ui->drizzle1_5xRadioButton->isChecked()) {
-            config.drizzle = 1.5;
+            stacker.config.drizzle = 1.5;
         }
         else {
-            config.drizzle = 2.0;
+            stacker.config.drizzle = 2.0;
         }
+    });
+
+    connect(&stacker, &Stacker::progressUpdated, this, [this](int current, int total) {
+        ui->stackingProgressEdit->setText(QString("%1/%2").arg(current).arg(total));
     });
 }
 
 void StackPage::updateUI() {
     ui->widthSpinBox->blockSignals(true);
-    ui->widthSpinBox->setValue(source.files[0].dimensions().width);
+    ui->widthSpinBox->setValue(stacker.source.files[0].dimensions().width);
     ui->widthSpinBox->blockSignals(false);
 
     ui->heightSpinBox->blockSignals(true);
-    ui->heightSpinBox->setValue(source.files[0].dimensions().height);
+    ui->heightSpinBox->setValue(stacker.source.files[0].dimensions().height);
     ui->heightSpinBox->blockSignals(false);
 }

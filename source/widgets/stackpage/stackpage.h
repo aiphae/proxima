@@ -31,16 +31,14 @@ private:
     Ui::StackPage *ui;
     void connectUI();
     void updateUI();
-    void enableUI();
+    void enableConfigEdit();
 
     // Display
     std::unique_ptr<Display> display;
     void displayFrame(const int frameNumber);
     int currentFrame = 0;
 
-    // Stacking
-    Stacker::Config config;
-    Stacker::Source source;
+    Stacker stacker;
 
     int totalFrames = 0;
     void analyzeFrames();

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1142</width>
-    <height>927</height>
+    <width>1139</width>
+    <height>973</height>
    </rect>
   </property>
   <property name="font">
@@ -165,6 +165,20 @@
          <bool>true</bool>
         </property>
         <layout class="QGridLayout" name="gridLayout_4">
+         <item row="1" column="1">
+          <widget class="QLabel" name="statusEdit">
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="statusLabel">
+           <property name="text">
+            <string>Status:</string>
+           </property>
+          </widget>
+         </item>
          <item row="0" column="0" colspan="2">
           <widget class="QPushButton" name="stackPushButton">
            <property name="minimumSize">
@@ -175,6 +189,20 @@
            </property>
            <property name="text">
             <string>Stack</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="0">
+          <widget class="QLabel" name="stackingProgressLabel">
+           <property name="text">
+            <string>Progress:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1">
+          <widget class="QLabel" name="stackingProgressEdit">
+           <property name="text">
+            <string/>
            </property>
           </widget>
          </item>
