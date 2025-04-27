@@ -3,11 +3,11 @@
 #include "components/frame.h"
 #include <opencv2/imgproc.hpp>
 
-cv::Mat Stacker::stack(Source &source, Config &config) {
-    return config.localAlign ? stackLocal(source, config) : stackGlobal(source, config, true);
+cv::Mat Stacker::stack() {
+    return config.localAlign ? stackLocal() : stackGlobal(true);
 }
 
-cv::Mat Stacker::stackGlobal(Source &source, Config &config, bool crop) {
+cv::Mat Stacker::stackGlobal(bool crop) {
     cv::Mat reference = getMatAtFrame(source.files, source.sorted[0].first);
 
     cv::Size drizzleSize(reference.cols * config.drizzle, reference.rows * config.drizzle);
@@ -47,6 +47,8 @@ cv::Mat Stacker::stackGlobal(Source &source, Config &config, bool crop) {
 
         accumulator += aligned * frameWeight;
         weights += frameWeight;
+
+        emit progressUpdated(i + 1, config.framesToStack);
     }
 
     if (weights == 0.0) {
@@ -64,7 +66,7 @@ cv::Mat Stacker::stackGlobal(Source &source, Config &config, bool crop) {
     return result;
 }
 
-cv::Mat Stacker::stackLocal(Source &source, Config &config) {
+cv::Mat Stacker::stackLocal() {
     cv::Mat reference = getMatAtFrame(source.files, source.sorted[0].first);
 
     cv::Size drizzleSize(reference.cols * config.drizzle, reference.rows * config.drizzle);
@@ -189,10 +191,12 @@ cv::Mat Stacker::stackLocal(Source &source, Config &config) {
                 }
             }
         }
+
+        emit progressUpdated(i + 1, config.framesToStack);
     }
 
     // Stack global fallback
-    cv::Mat stackedGlobal = stackGlobal(source, config, false);
+    cv::Mat stackedGlobal = stackGlobal(false);
     stackedGlobal.convertTo(stackedGlobal, CV_32FC3);
 
     // Final normalization

@@ -1,33 +1,39 @@
 #ifndef STACKER_H
 #define STACKER_H
 
+#include <QObject>
 #include <opencv2/opencv.hpp>
 #include "components/mediafile.h"
 #include "components/alignmentpoint.h"
 
-class Stacker {
+class Stacker : public QObject {
+    Q_OBJECT
+
 public:
-    struct Source {
+    explicit Stacker(QObject *parent = nullptr) : QObject(parent) {}
+
+    struct {
         std::vector<MediaFile> files;
         std::vector<std::pair<int, double>> sorted;
-    };
+    } source;
 
-    struct Config {
+    struct {
         int framesToStack;
         int outputWidth;
         int outputHeight;
-
         bool localAlign;
         std::vector<AlignmentPoint> aps;
-
         double drizzle = 1.0;
-    };
+    } config;
 
-    static cv::Mat stack(Source &source, Config &config);
+    cv::Mat stack();
+
+signals:
+    void progressUpdated(int current, int total);
 
 private:
-    static cv::Mat stackGlobal(Source &source, Config &config, bool crop);
-    static cv::Mat stackLocal(Source &source, Config &config);
+    cv::Mat stackGlobal(bool crop);
+    cv::Mat stackLocal();
 };
 
 #endif // STACKER_H

@@ -9,11 +9,11 @@ SOURCES += \
     source/components/mediafile.cpp \
     source/concurrency/threadpool.cpp \
     source/main.cpp \
-    source/mainwindow/mainwindow.cpp \
     source/modules/stacker.cpp \
-    source/pages/homepage/homepage.cpp \
-    source/pages/processpage/processpage.cpp \
-    source/pages/stackpage/stackpage.cpp
+    source/widgets/homepage/homepage.cpp \
+    source/widgets/mainwindow/mainwindow.cpp \
+    source/widgets/processpage/processpage.cpp \
+    source/widgets/stackpage/stackpage.cpp
 
 HEADERS += \
     source/components/alignmentpoint.h \
@@ -22,21 +22,21 @@ HEADERS += \
     source/components/helpers.h \
     source/components/mediafile.h \
     source/concurrency/threadpool.h \
-    source/mainwindow/mainwindow.h \
     source/modules/stacker.h \
-    source/pages/homepage/homepage.h \
-    source/pages/processpage/processpage.h\
-    source/pages/stackpage/stackpage.h
+    source/widgets/homepage/homepage.h \
+    source/widgets/mainwindow/mainwindow.h \
+    source/widgets/processpage/processpage.h \
+    source/widgets/stackpage/stackpage.h
 
 FORMS += \
-    source/mainwindow/mainwindow.ui \
-    source/pages/homepage/homepage.ui \
-    source/pages/processpage/processpage.ui \
-    source/pages/stackpage/stackpage.ui
+    source/widgets/homepage/homepage.ui \
+    source/widgets/mainwindow/mainwindow.ui \
+    source/widgets/processpage/processpage.ui \
+    source/widgets/stackpage/stackpage.ui
 
 INCLUDEPATH += \
     source \
-    source/pages
+    source/widgets
 
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
