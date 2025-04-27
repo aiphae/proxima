@@ -4,13 +4,14 @@
 #include <opencv2/imgproc.hpp>
 
 cv::Mat Stacker::stack(Source &source, Config &config) {
-    return config.localAlign ? stackLocal(source, config) : stackGlobal(source, config);
+    return config.localAlign ? stackLocal(source, config) : stackGlobal(source, config, true);
 }
 
-cv::Mat Stacker::stackGlobal(Source &source, Config &config) {
+cv::Mat Stacker::stackGlobal(Source &source, Config &config, bool crop) {
     cv::Mat reference = getMatAtFrame(source.files, source.sorted[0].first);
 
-    cv::Mat accumulator = cv::Mat::zeros(reference.size(), CV_32FC3);
+    cv::Size drizzleSize(reference.cols * config.drizzle, reference.rows * config.drizzle);
+    cv::Mat accumulator = cv::Mat::zeros(drizzleSize, CV_32FC3);
     double weights = 0.0;
 
     cv::Mat referenceGray;
@@ -32,12 +33,15 @@ cv::Mat Stacker::stackGlobal(Source &source, Config &config) {
         cv::Point2f shift = cv::phaseCorrelate(referenceGray, currentGray);
 
         cv::Mat M = (cv::Mat_<double>(2, 3) <<
-            1, 0, -shift.x,
-            0, 1, -shift.y
+            1, 0, -shift.x * config.drizzle,
+            0, 1, -shift.y * config.drizzle
         );
 
+        cv::Mat enlarged;
+        cv::resize(current, enlarged, drizzleSize, 0, 0, cv::INTER_NEAREST);
+
         cv::Mat aligned;
-        cv::warpAffine(current, aligned, M, accumulator.size(), cv::INTER_CUBIC);
+        cv::warpAffine(enlarged, aligned, M, drizzleSize, cv::INTER_CUBIC);
 
         aligned.convertTo(aligned, CV_32FC3);
 
@@ -53,18 +57,34 @@ cv::Mat Stacker::stackGlobal(Source &source, Config &config) {
     accumulator /= weights;
     accumulator.convertTo(result, CV_8UC3);
 
+    if (crop) {
+        result = Frame::centerObject(result, config.outputWidth * config.drizzle, config.outputHeight * config.drizzle);
+    }
+
     return result;
 }
 
 cv::Mat Stacker::stackLocal(Source &source, Config &config) {
     cv::Mat reference = getMatAtFrame(source.files, source.sorted[0].first);
 
-    cv::Mat accumulator = cv::Mat::zeros(reference.size(), CV_32FC3);
-    cv::Mat weights = cv::Mat::zeros(reference.size(), CV_32F);
+    cv::Size drizzleSize(reference.cols * config.drizzle, reference.rows * config.drizzle);
 
+    cv::Mat accumulator = cv::Mat::zeros(drizzleSize, CV_32FC3);
+    cv::Mat weights = cv::Mat::zeros(drizzleSize, CV_32F);
+
+    // Prepare reference gray
     cv::Mat referenceGray;
     cv::cvtColor(reference, referenceGray, cv::COLOR_BGR2GRAY);
     referenceGray.convertTo(referenceGray, CV_32F);
+
+    // Upscale reference gray
+    cv::Mat referenceGrayDrizzle;
+    if (config.drizzle > 1) {
+        cv::resize(referenceGray, referenceGrayDrizzle, drizzleSize, 0, 0, cv::INTER_NEAREST);
+    }
+    else {
+        referenceGrayDrizzle = referenceGray;
+    }
 
     for (int i = 1; i < config.framesToStack; ++i) {
         cv::Mat current = getMatAtFrame(source.files, source.sorted[i].first);
@@ -72,40 +92,73 @@ cv::Mat Stacker::stackLocal(Source &source, Config &config) {
             continue;
         }
 
+        // Current gray
         cv::Mat currentGray;
         cv::cvtColor(current, currentGray, cv::COLOR_BGR2GRAY);
         currentGray.convertTo(currentGray, CV_32F);
 
+        // Global alignment (phase correlation)
         cv::Point2f globalShift = cv::phaseCorrelate(referenceGray, currentGray);
+
+        // Global shift scaled by drizzleFactor
         cv::Mat globalM = (cv::Mat_<double>(2, 3) <<
-            1, 0, -globalShift.x,
-            0, 1, -globalShift.y
+            1, 0, -globalShift.x * config.drizzle,
+            0, 1, -globalShift.y * config.drizzle
         );
 
-        cv::Mat globalAligned, globalAlignedGray;
-        cv::warpAffine(current, globalAligned, globalM, current.size(), cv::INTER_LANCZOS4);
-        cv::warpAffine(currentGray, globalAlignedGray, globalM, current.size(), cv::INTER_LANCZOS4);
+        // Upscale current frame
+        cv::Mat enlarged, enlargedGray;
+        if (config.drizzle > 1) {
+            cv::resize(current, enlarged, drizzleSize, 0, 0, cv::INTER_NEAREST);
+            cv::resize(currentGray, enlargedGray, drizzleSize, 0, 0, cv::INTER_NEAREST);
+        } else {
+            enlarged = current;
+            enlargedGray = currentGray;
+        }
 
-        // Weight based on frame quality so higher-quality frames impact more
+        // Apply global shift
+        cv::Mat globalAligned, globalAlignedGray;
+        cv::warpAffine(enlarged, globalAligned, globalM, drizzleSize, cv::INTER_LANCZOS4, cv::BORDER_REFLECT);
+        cv::warpAffine(enlargedGray, globalAlignedGray, globalM, drizzleSize, cv::INTER_LANCZOS4, cv::BORDER_REFLECT);
+
         float frameWeight = source.sorted[i].second;
-        // Padding to extract a larger ROI for more precise interpolation
-        constexpr int padding = 5;
+        constexpr int padding = 5; // padding in drizzle space
 
         for (const auto &ap : config.aps) {
-            cv::Rect roi = ap.rect() & cv::Rect(0, 0, accumulator.cols, accumulator.rows);
+            // Adjust ROI for drizzle factor
+            cv::Rect roi = ap.rect();
+            roi.x *= config.drizzle;
+            roi.y *= config.drizzle;
+            roi.width *= config.drizzle;
+            roi.height *= config.drizzle;
 
-            // Extended ROI to support interpolation
+            cv::Rect safeRoi = roi & cv::Rect(0, 0, accumulator.cols, accumulator.rows);
+
+            if (safeRoi.width <= 0 || safeRoi.height <= 0) {
+                continue;
+            }
+
+            // Padded ROI to allow subpixel interpolation
             cv::Rect paddedRoi(
-                std::max(roi.x - padding, 0),
-                std::max(roi.y - padding, 0),
-                std::min(roi.width + 2 * padding, accumulator.cols - roi.x + padding),
-                std::min(roi.height + 2 * padding, accumulator.rows - roi.y + padding)
+                std::max(safeRoi.x - padding, 0),
+                std::max(safeRoi.y - padding, 0),
+                std::min(safeRoi.width + 2 * padding, accumulator.cols - safeRoi.x + padding),
+                std::min(safeRoi.height + 2 * padding, accumulator.rows - safeRoi.y + padding)
             );
 
-            // Compute local shift from original ROI
-            cv::Point2f localShift = Frame::computeShift(referenceGray(roi), globalAlignedGray(roi));
+            // Compute local shift based on non-drizzle reference
+            // (scale back ROI for reference)
+            cv::Rect originalRoi(
+                roi.x / config.drizzle,
+                roi.y / config.drizzle,
+                roi.width / config.drizzle,
+                roi.height / config.drizzle
+            );
+            cv::Point2f localShift = Frame::computeShift(referenceGray(originalRoi), currentGray(originalRoi));
+            localShift.x *= config.drizzle;
+            localShift.y *= config.drizzle;
 
-            // Warp padded ROI
+            // Apply local warp
             cv::Mat warpedPatch;
             cv::Mat localM = (cv::Mat_<double>(2, 3) <<
                 1, 0, -localShift.x,
@@ -114,48 +167,51 @@ cv::Mat Stacker::stackLocal(Source &source, Config &config) {
             cv::warpAffine(globalAligned(paddedRoi), warpedPatch, localM, paddedRoi.size(), cv::INTER_CUBIC, cv::BORDER_REFLECT);
             warpedPatch.convertTo(warpedPatch, CV_32FC3);
 
-            // Crop back to original ROI size
+            // Crop back to safe ROI inside padded
             cv::Rect roiInPadded(
-                roi.x - paddedRoi.x,
-                roi.y - paddedRoi.y,
-                roi.width,
-                roi.height
-            );
+                safeRoi.x - paddedRoi.x,
+                safeRoi.y - paddedRoi.y,
+                safeRoi.width,
+                safeRoi.height
+                );
             cv::Mat cropped = warpedPatch(roiInPadded);
 
-            // Accumulate into the correct position
-            for (int y = 0; y < roi.height; ++y) {
-                for (int x = 0; x < roi.width; ++x) {
+            // Accumulate
+            for (int y = 0; y < safeRoi.height; ++y) {
+                for (int x = 0; x < safeRoi.width; ++x) {
                     cv::Vec3f val = cropped.at<cv::Vec3f>(y, x);
-                    float w = frameWeight;
                     if (val[0] > 0.0f && val[1] > 0.0f && val[2] > 0.0f) {
-                        int ax = roi.x + x;
-                        int ay = roi.y + y;
-                        weights.at<float>(ay, ax) += w;
-                        accumulator.at<cv::Vec3f>(ay, ax) += val * w;
+                        int ax = safeRoi.x + x;
+                        int ay = safeRoi.y + y;
+                        weights.at<float>(ay, ax) += frameWeight;
+                        accumulator.at<cv::Vec3f>(ay, ax) += val * frameWeight;
                     }
                 }
             }
         }
     }
 
-    cv::Mat stackedGlobal = stackGlobal(source, config);
+    // Stack global fallback
+    cv::Mat stackedGlobal = stackGlobal(source, config, false);
     stackedGlobal.convertTo(stackedGlobal, CV_32FC3);
+
+    // Final normalization
     cv::Mat result = cv::Mat::zeros(accumulator.size(), CV_32FC3);
 
     for (int y = 0; y < result.rows; ++y) {
         for (int x = 0; x < result.cols; ++x) {
             float w = weights.at<float>(y, x);
-            if (w > 0) {
+            if (w > 0.0f) {
                 result.at<cv::Vec3f>(y, x) = accumulator.at<cv::Vec3f>(y, x) / w;
-            }
-            else {
+            } else {
                 result.at<cv::Vec3f>(y, x) = stackedGlobal.at<cv::Vec3f>(y, x);
             }
         }
     }
 
     result.convertTo(result, CV_8UC3);
+
+    result = Frame::centerObject(result, config.outputWidth * config.drizzle, config.outputHeight * config.drizzle);
 
     return result;
 }

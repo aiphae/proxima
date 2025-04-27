@@ -491,6 +491,9 @@
         <layout class="QGridLayout" name="gridLayout_9">
          <item row="1" column="0">
           <widget class="QRadioButton" name="drizzle1_5xRadioButton">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
            <property name="text">
             <string>1.5x</string>
            </property>
@@ -498,6 +501,9 @@
          </item>
          <item row="1" column="1">
           <widget class="QRadioButton" name="drizzle2_0xRadioButton">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
            <property name="text">
             <string>2.0x</string>
            </property>

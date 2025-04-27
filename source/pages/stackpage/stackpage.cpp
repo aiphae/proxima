@@ -105,7 +105,6 @@ void StackPage::on_stackPushButton_clicked() {
     }
 
     std::string outputDir = QFileDialog::getExistingDirectory().toStdString();
-    qDebug() << outputDir;
     if (outputDir.empty()) {
         return;
     }
@@ -202,6 +201,25 @@ void StackPage::connectUI() {
 
     connect(ui->localAlignmentCheckBox, &QCheckBox::checkStateChanged, this, [this](Qt::CheckState state) {
         ui->localAlignmentFrame->setEnabled(state == Qt::Checked);
+        config.localAlign = (state == Qt::Checked);
+        displayFrame(currentFrame);
+    });
+
+    connect(ui->drizzleCheckBox, &QCheckBox::checkStateChanged, this, [this](Qt::CheckState state) {
+        bool checked = (state == Qt::Checked);
+
+        ui->drizzle1_5xRadioButton->setEnabled(checked);
+        ui->drizzle2_0xRadioButton->setEnabled(checked);
+
+        if (!checked) {
+            config.drizzle = 1.0;
+        }
+        else if (ui->drizzle1_5xRadioButton->isChecked()) {
+            config.drizzle = 1.5;
+        }
+        else {
+            config.drizzle = 2.0;
+        }
     });
 }
 

@@ -19,12 +19,14 @@ public:
 
         bool localAlign;
         std::vector<AlignmentPoint> aps;
+
+        double drizzle = 1.0;
     };
 
     static cv::Mat stack(Source &source, Config &config);
 
 private:
-    static cv::Mat stackGlobal(Source &source, Config &config);
+    static cv::Mat stackGlobal(Source &source, Config &config, bool crop);
     static cv::Mat stackLocal(Source &source, Config &config);
 };
 
