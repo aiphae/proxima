@@ -190,7 +190,7 @@ std::vector<AlignmentPoint> Frame::getAps(cv::Mat frame, int apSize, APPlacement
 // Computed the translational shifty between 'reference' and 'target'
 // using phase correlation.
 //
-// Parabola fitting is used to better accuracy.
+// Parabola fitting is used for subpixel accuracy.
 //
 // Returns a cv::Point2f representing the (x, y) shift from 'reference' to 'target'
 // so (-x, -y) is needed to warp 'target' to match 'reference'.
