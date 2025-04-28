@@ -19,7 +19,11 @@ cv::Mat Stacker::stackGlobal(bool emitSignals, bool crop) {
         return {};
     }
 
-    cv::Size drizzleSize(reference.cols * config.drizzle, reference.rows * config.drizzle);
+    cv::Size drizzleSize {
+        static_cast<int>(reference.cols * config.drizzle),
+        static_cast<int>(reference.rows * config.drizzle)
+    };
+
     cv::Mat accumulator = cv::Mat::zeros(drizzleSize, CV_32FC3);
     double weights = 0.0;
 
@@ -33,30 +37,34 @@ cv::Mat Stacker::stackGlobal(bool emitSignals, bool crop) {
             continue;
         }
 
+        // Higher-quality frames have more impact
         double frameWeight = source.sorted[i].second;
 
         cv::Mat currentGray;
         cv::cvtColor(current, currentGray, cv::COLOR_BGR2GRAY);
         currentGray.convertTo(currentGray, CV_32F);
 
+        // Compute the shift between the current image and the reference one
         cv::Point2f shift = cv::phaseCorrelate(referenceGray, currentGray);
-
         cv::Mat M = (cv::Mat_<double>(2, 3) <<
             1, 0, -shift.x * config.drizzle,
             0, 1, -shift.y * config.drizzle
         );
 
+        // Enlarge to allow drizzle
         cv::Mat enlarged;
         cv::resize(current, enlarged, drizzleSize, 0, 0, cv::INTER_NEAREST);
 
+        // Warp the current image
         cv::Mat aligned;
         cv::warpAffine(enlarged, aligned, M, drizzleSize, cv::INTER_CUBIC);
-
         aligned.convertTo(aligned, CV_32FC3);
 
+        // Accumulate the results
         accumulator += aligned * frameWeight;
         weights += frameWeight;
 
+        // Emit the signal to the main thread
         if (emitSignals) {
             QString status = QString("%1/%2").arg(i + 1, config.framesToStack);
             emit progressUpdated(status);
