@@ -19,19 +19,20 @@ StackPage::~StackPage() {
 }
 
 void StackPage::on_selectFilesPushButton_clicked() {
-    QStringList files = QFileDialog::getOpenFileNames(this, "Select Files", QDir::homePath(), fileFilters());
+    const QStringList files = QFileDialog::getOpenFileNames(this, "Select Files", QDir::homePath(), fileFilters());
     if (files.isEmpty()) {
         return;
     }
 
-    totalFrames = 0;
     stacker.source.files.clear();
     stacker.source.sorted.clear();
+    totalFrames = 0;
 
     for (const QString &file : files) {
-        if (MediaFile media(file); media.isValid()) {
-            stacker.source.files.emplace_back(file);
-            totalFrames += stacker.source.files.back().frames();
+        MediaFile media(file);
+        if (media.isValid()) {
+            stacker.source.files.push_back(file);
+            totalFrames += media.frames();
         }
     }
 
@@ -39,23 +40,19 @@ void StackPage::on_selectFilesPushButton_clicked() {
         return;
     }
 
-    updateUI();
-
     stacker.config.outputWidth = stacker.source.files[0].dimensions().width;
     stacker.config.outputHeight = stacker.source.files[0].dimensions().height;
-
-    ui->totalFramesEdit->setText(QString::number(totalFrames));
-    ui->frameSlider->setMinimum(0);
-    ui->frameSlider->setMaximum(totalFrames - 1);
-    ui->frameSlider->setValue(0);
-
-    stacker.source.sorted.resize(totalFrames);
+    stacker.source.sorted.resize(totalFrames, {0, 0.0});
     for (int i = 0; i < totalFrames; ++i) {
-        stacker.source.sorted[i] = {i, 0.0};
+        stacker.source.sorted[i].first = i;
     }
 
+    ui->totalFramesEdit->setText(QString::number(totalFrames));
+    ui->frameSlider->setRange(0, totalFrames - 1);
+    ui->frameSlider->setValue(0);
     ui->analyzingGroupBox->setEnabled(true);
 
+    updateUI();
     displayFrame(0);
 }
 
@@ -82,14 +79,12 @@ void StackPage::on_estimateAPGridPushButton_clicked() {
     APPlacement placement = ui->featureBasedApPlacement->isChecked() ? APPlacement::FeatureBased : APPlacement::Uniform;
     stacker.config.aps = Frame::getAps(reference, apSize, placement);
 
-    QString text;
-    if (stacker.config.aps.size() > 0) {
-        text = QString::number(stacker.config.aps.size());
+    if (stacker.config.aps.empty()) {
+        ui->apAmountEdit->setText("<font color='red'>No APs detected!</font>");
     }
     else {
-        text = text = "<font color='red'>No APs detected!</font>";
+        ui->apAmountEdit->setText(QString::number(stacker.config.aps.size()));
     }
-    ui->apAmountEdit->setText(text);
 
     // Preview alignment points
     cv::Mat preview = reference.clone();
@@ -110,8 +105,9 @@ void StackPage::on_stackPushButton_clicked() {
     }
 
     std::vector<QSpinBox *> spinBoxes {
-        ui->percentToStackSpinBox1, ui->percentToStackSpinBox2, ui->percentToStackSpinBox3,
-        ui->percentToStackSpinBox4, ui->percentToStackSpinBox5
+        ui->percentToStackSpinBox1, ui->percentToStackSpinBox2,
+        ui->percentToStackSpinBox3, ui->percentToStackSpinBox4,
+        ui->percentToStackSpinBox5
     };
 
     std::thread([this, spinBoxes, outputDir]() {
@@ -120,9 +116,12 @@ void StackPage::on_stackPushButton_clicked() {
             if (percent < 1) {
                 continue;
             }
+
             stacker.config.framesToStack = totalFrames * percent / 100;
 
-            ui->statusEdit->setText(QString("Stacking %1%").arg(percent));
+            QMetaObject::invokeMethod(this, [this, percent]() {
+                ui->statusEdit->setText(QString("Stacking %1%").arg(percent));
+            });
 
             cv::Mat stacked = stacker.stack();
             std::string filename = outputDir + "/proxima-stacked-" + std::to_string(percent) + ".tif";
@@ -231,8 +230,8 @@ void StackPage::connectUI() {
         }
     });
 
-    connect(&stacker, &Stacker::progressUpdated, this, [this](int current, int total) {
-        ui->stackingProgressEdit->setText(QString("%1/%2").arg(current).arg(total));
+    connect(&stacker, &Stacker::progressUpdated, this, [this](QString status) {
+        ui->stackingProgressEdit->setText(status);
     });
 }
 
