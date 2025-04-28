@@ -1,7 +1,11 @@
 #include "frame.h"
 
-#include <qDebug>
-
+// Centers an object in 'frame' by detecting the largest contour and
+// adjusting a bounding rectangle to 'width' and 'height'.
+//
+// If the rectangle extends beyond the frame boundaries, out-of-bounds areas
+// are filled with black.
+//
 cv::Mat Frame::centerObject(cv::Mat frame, int width, int height) {
     cv::Mat processed;
     cv::cvtColor(frame, processed, cv::COLOR_BGR2GRAY);
@@ -28,15 +32,15 @@ cv::Mat Frame::centerObject(cv::Mat frame, int width, int height) {
     // Rectangle for downscaled image
     cv::Rect rect = cv::boundingRect(allPoints);
     // Back to original size
-    rect = cv::Rect{rect.tl() * (1.0 / scale), rect.br() * (1.0 / scale)};
+    rect = cv::Rect {rect.tl() * (1.0 / scale), rect.br() * (1.0 / scale)};
 
     // Center of the rectangle
-    cv::Point center = (rect.tl() + rect.br()) / 2;
+    cv::Point center {rect.tl() + rect.br() / 2};
     // Calculate a rectangle with 'width' and 'height' around center
-    rect = cv::Rect{center.x - width / 2, center.y - height / 2, width, height};
+    rect = cv::Rect {center.x - width / 2, center.y - height / 2, width, height};
 
     // Check for out-of-bounds
-    cv::Rect validRect = rect & cv::Rect{0, 0, frame.cols, frame.rows};
+    cv::Rect validRect = rect & cv::Rect {0, 0, frame.cols, frame.rows};
     if (validRect.width == rect.width && validRect.height == rect.height) {
         return frame(validRect).clone();
     }
@@ -48,7 +52,14 @@ cv::Mat Frame::centerObject(cv::Mat frame, int width, int height) {
     return black;
 }
 
+// Estimates the quality of 'frame' by measuring its sharpness.
+//
+// Sharpness is calculated as the mean of the capped gradient magnitude,
+// where higher values indicate sharper, more detailed images, and lower
+// values suggest blurring.
+//
 double Frame::estimateQuality(cv::Mat frame) {
+    // Convert to gray
     cv::Mat gray;
     if (frame.channels() == 3) {
         cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
@@ -57,21 +68,32 @@ double Frame::estimateQuality(cv::Mat frame) {
         gray = frame;
     }
 
+    // Apply blur to reduce noise
     cv::GaussianBlur(gray, gray, cv::Size(3, 3), 0.5);
 
+    // Compute the gradients in the x and y directions using Sobel operators
     cv::Mat gradX, gradY;
     cv::Sobel(gray, gradX, CV_64F, 1, 0, 3);
     cv::Sobel(gray, gradY, CV_64F, 0, 1, 3);
 
+    // Calculate the gradient magnitude from the x and y gradients
     cv::Mat magnitude;
     cv::magnitude(gradX, gradY, magnitude);
 
+    // Cap the gradient magnitude at 200 to prevent extreme values from dominating
     cv::Mat capped;
     cv::threshold(magnitude, capped, 200.0, 200.0, cv::THRESH_TRUNC);
 
+    // Return the mean of the capped gradient magnitude
     return cv::mean(capped)[0];
 }
 
+// Arranges alignment points over 'frame' based on the specified placement mode.
+//
+// Two modes (APPlacement enum):
+// - FeatureBased: uses corner detection (cv::goodFeaturesToTrack());
+// - Uniform: places the points evenly over the detected object.
+//
 std::vector<AlignmentPoint> Frame::getAps(cv::Mat frame, int apSize, APPlacement placement) {
     std::vector<AlignmentPoint> aps;
 
@@ -81,6 +103,7 @@ std::vector<AlignmentPoint> Frame::getAps(cv::Mat frame, int apSize, APPlacement
     std::vector<cv::Point> cvAps;
 
     if (placement == APPlacement::FeatureBased) {
+        // Detect strong corners
         processed.convertTo(processed, CV_32FC1);
         cv::blur(processed, processed, {3, 3});
         cv::goodFeaturesToTrack(processed, cvAps, 150, 0.5, apSize / 2);
@@ -95,6 +118,7 @@ std::vector<AlignmentPoint> Frame::getAps(cv::Mat frame, int apSize, APPlacement
             return {};
         }
 
+        // Lambda to find the largest contour by area
         auto largestContour = [](std::vector<std::vector<cv::Point>> &contours) -> int {
             int largestContour = 0;
             double maxArea = 0.0;
@@ -108,11 +132,14 @@ std::vector<AlignmentPoint> Frame::getAps(cv::Mat frame, int apSize, APPlacement
             return largestContour;
         };
 
+        // Distance between alignment points
         const int step = apSize / 2;
 
+        // Create mask of the largest contour
         cv::Mat mask = cv::Mat::zeros(frame.size(), CV_8UC1);
         cv::drawContours(mask, contours, largestContour(contours), 255, cv::FILLED);
 
+        // Erode the mask so the points aren't placed too close to the edges
         cv::Mat kernel = cv::Mat::ones(2 * step, 2 * step, CV_8UC1);
         cv::erode(mask, mask, cv::Mat::ones(step, step, CV_8UC1));
 
@@ -120,19 +147,25 @@ std::vector<AlignmentPoint> Frame::getAps(cv::Mat frame, int apSize, APPlacement
             std::vector<std::vector<cv::Point>> layerContours;
             cv::findContours(mask, layerContours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_NONE);
 
+            // Find the largest contour in the current layer
             std::vector<cv::Point> contour = layerContours[largestContour(layerContours)];
 
+            // Arc length of the countour
             double arcLen = cv::arcLength(contour, true);
+            // Number of points to place
             int amount = std::max(1, static_cast<int>(arcLen / apSize * 1.4));
 
             for (int i = 0; i < amount; ++i) {
+                // Target distance along the contour for the current point
                 double targetDist = (arcLen * i) / amount;
                 double running = 0.0;
+                // Iterate through contour segments to find the point at the target distance
                 for (size_t j = 1; j < contour.size(); ++j) {
                     cv::Point2f p1 = contour[j - 1];
                     cv::Point2f p2 = contour[j];
                     double segLen = cv::norm(p2 - p1);
                     if (running + segLen >= targetDist) {
+                        // Interpolate to find the exact point
                         double alpha = (targetDist - running) / segLen;
                         cv::Point2f pt = p1 + alpha * (p2 - p1);
                         cvAps.push_back(pt);
@@ -142,6 +175,7 @@ std::vector<AlignmentPoint> Frame::getAps(cv::Mat frame, int apSize, APPlacement
                 }
             }
 
+            // Further erode to go 'deeper'
             cv::erode(mask, mask, kernel);
         }
     }
@@ -153,6 +187,14 @@ std::vector<AlignmentPoint> Frame::getAps(cv::Mat frame, int apSize, APPlacement
     return aps;
 }
 
+// Computed the translational shifty between 'reference' and 'target'
+// using phase correlation.
+//
+// Parabola fitting is used to better accuracy.
+//
+// Returns a cv::Point2f representing the (x, y) shift from 'reference' to 'target'
+// so (-x, -y) is needed to warp 'target' to match 'reference'.
+//
 cv::Point2f Frame::computeShift(cv::Mat reference, cv::Mat target) {
     // Ensure images are the same size and type
     CV_Assert(reference.size() == target.size() && reference.type() == CV_32F && target.type() == CV_32F);
@@ -160,34 +202,34 @@ cv::Point2f Frame::computeShift(cv::Mat reference, cv::Mat target) {
     int W = reference.cols;
     int H = reference.rows;
 
-    // Step 1: Compute the FFT of both images
+    // Compute the FFT of both images
     cv::Mat fft_ref, fft_tar;
     cv::dft(reference, fft_ref, cv::DFT_COMPLEX_OUTPUT);
     cv::dft(target, fft_tar, cv::DFT_COMPLEX_OUTPUT);
 
-    // Step 2: Compute the conjugate of the FFT of the target
+    // Compute the conjugate of the FFT of the target
     cv::Mat planes[2];
     cv::split(fft_tar, planes);
     planes[1] = -planes[1]; // Negate the imaginary part to compute conjugate
     cv::Mat conj_fft_tar;
     cv::merge(planes, 2, conj_fft_tar);
 
-    // Step 3: Compute the element-wise product of fft_ref and conj_fft_tar
+    // Compute the element-wise product of fft_ref and conj_fft_tar
     cv::Mat prod;
     cv::mulSpectrums(fft_ref, conj_fft_tar, prod, 0);
 
-    // Step 4: Compute the inverse FFT to get the cross-correlation map
+    // Compute the inverse FFT to get the cross-correlation map
     cv::Mat correlation;
     cv::idft(prod, correlation, cv::DFT_REAL_OUTPUT | cv::DFT_SCALE);
 
-    // Step 5: Find the location of the maximum value in the correlation map
+    // Find the location of the maximum value in the correlation map
     double min_val, max_val;
     cv::Point min_loc, max_loc;
     cv::minMaxLoc(correlation, &min_val, &max_val, &min_loc, &max_loc);
     int dx = max_loc.x;
     int dy = max_loc.y;
 
-    // Step 6: Refine the shift to subpixel accuracy using parabolic interpolation
+    // Refine the shift to subpixel accuracy using parabolic interpolation
     float delta_x = 0.0f;
     float delta_y = 0.0f;
 
@@ -213,7 +255,7 @@ cv::Point2f Frame::computeShift(cv::Mat reference, cv::Mat target) {
         delta_y = (f - d) / (2 * denom_y);
     }
 
-    // Step 7: Compute the total shift and adjust for periodicity
+    // Compute the total shift and adjust for periodicity
     float shift_x = dx + delta_x;
     float shift_y = dy + delta_y;
 

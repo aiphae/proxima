@@ -1,8 +1,8 @@
 #ifndef FRAME_H
 #define FRAME_H
 
-#include <opencv2/opencv.hpp>
 #include "alignmentpoint.h"
+#include <opencv2/opencv.hpp>
 
 enum class APPlacement {
     Uniform,
