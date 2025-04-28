@@ -29,11 +29,12 @@ public:
     cv::Mat stack();
 
 signals:
-    void progressUpdated(int current, int total);
+    // Signal to the main thread to update the GUI
+    void progressUpdated(QString status);
 
 private:
-    cv::Mat stackGlobal(bool crop);
-    cv::Mat stackLocal();
+    cv::Mat stackGlobal(bool emitSignals, bool crop);
+    cv::Mat stackLocal(bool emitSignals);
 };
 
 #endif // STACKER_H
