@@ -35,7 +35,7 @@ cv::Mat Frame::centerObject(cv::Mat frame, int width, int height) {
     rect = cv::Rect {rect.tl() * (1.0 / scale), rect.br() * (1.0 / scale)};
 
     // Center of the rectangle
-    cv::Point center {rect.tl() + rect.br() / 2};
+    cv::Point center = (rect.tl() + rect.br()) / 2;
     // Calculate a rectangle with 'width' and 'height' around center
     rect = cv::Rect {center.x - width / 2, center.y - height / 2, width, height};
 
