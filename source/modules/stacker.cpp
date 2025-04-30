@@ -66,7 +66,7 @@ cv::Mat Stacker::stackGlobal(StackSource &source, StackConfig &config, bool emit
 
         // Emit the signal to the main thread
         if (emitSignals) {
-            QString status = QString("%1/%2").arg(i + 1, config.framesToStack);
+            QString status = QString("%1/%2").arg(i + 1).arg(config.framesToStack);
             emit progressUpdated(status);
         }
     }
@@ -153,49 +153,50 @@ cv::Mat Stacker::stackLocal(StackSource &source, StackConfig &config, bool emitS
         for (const auto &ap : config.aps) {
             cv::Rect roi = ap.rect();
             // Ensure ROI is within bounds
-            roi = roi & cv::Rect{0, 0, current.cols, current.rows};
+            roi = roi & cv::Rect{0, 0, accumulator.cols, accumulator.rows};
 
             // Scale ROI for drizzle
             cv::Rect drizzleRoi {
-                roi.x *= config.drizzle,
-                roi.y += config.drizzle,
-                roi.width *= config.drizzle,
-                roi.height *= config.drizzle
+                static_cast<int>(roi.x * config.drizzle),
+                static_cast<int>(roi.y * config.drizzle),
+                static_cast<int>(roi.width * config.drizzle),
+                static_cast<int>(roi.height * config.drizzle)
             };
 
             // Padded ROI for interpolation
             cv::Rect paddedRoi {
-                std::max(roi.x - padding, 0),
-                std::max(roi.y - padding, 0),
-                std::min(roi.width + 2 * padding, accumulator.cols - roi.x + padding),
-                std::min(roi.height + 2 * padding, accumulator.rows - roi.y + padding)
+                std::max(drizzleRoi.x - padding, 0),
+                std::max(drizzleRoi.y - padding, 0),
+                std::min(drizzleRoi.width + 2 * padding, accumulator.cols - drizzleRoi.x + padding),
+                std::min(drizzleRoi.height + 2 * padding, accumulator.rows - drizzleRoi.y + padding)
             };
 
             // Estimate local shift and scale it for drizzle
-            cv::Point2f localShift = Frame::computeShift(referenceGray(roi), currentGray(roi));
+            cv::Point2f localShift = Frame::computeShift(referenceGray(roi), globalAlignedGray(roi));
             localShift.x *= config.drizzle;
             localShift.y *= config.drizzle;
 
             // Apply local shift to the padded ROI
-            cv::Mat warpedPatch {paddedRoi.size(), CV_32FC3};
+            cv::Mat warpedPatch;
             cv::Mat localM = (cv::Mat_<double>{2, 3} <<
                 1, 0, -localShift.x,
                 0, 1, -localShift.y
             );
             cv::warpAffine(globalAligned(paddedRoi), warpedPatch, localM, paddedRoi.size(), cv::INTER_CUBIC, cv::BORDER_REFLECT);
+            warpedPatch.convertTo(warpedPatch, CV_32FC3);
 
             // Back to the original ROI size
             cv::Rect roiInPadded {
-                roi.x - paddedRoi.x,
-                roi.y - paddedRoi.y,
-                roi.width,
-                roi.height
+                drizzleRoi.x - paddedRoi.x,
+                drizzleRoi.y - paddedRoi.y,
+                drizzleRoi.width,
+                drizzleRoi.height
             };
             cv::Mat cropped = warpedPatch(roiInPadded);
 
             // Accumulate into shifted position
-            for (int y = 0; y < roi.height; ++y) {
-                for (int x = 0; x < roi.width; ++x) {
+            for (int y = 0; y < drizzleRoi.height; ++y) {
+                for (int x = 0; x < drizzleRoi.width; ++x) {
                     cv::Vec3f val = cropped.at<cv::Vec3f>(y, x);
                     if (val[0] == 0.0f && val[1] == 0.0f && val[2] == 0.0f) {
                         continue;
@@ -206,8 +207,8 @@ cv::Mat Stacker::stackLocal(StackSource &source, StackConfig &config, bool emitS
                     // to spread a pixel to 4 neighboring points
 
                     // Where the pixel should land
-                    float fx = roi.x + x + localShift.x;
-                    float fy = roi.y + y + localShift.y;
+                    float fx = drizzleRoi.x + x + localShift.x;
+                    float fy = drizzleRoi.y + y + localShift.y;
 
                     // Integer part of the pixel
                     int ix = static_cast<int>(std::floor(fx));
@@ -234,7 +235,7 @@ cv::Mat Stacker::stackLocal(StackSource &source, StackConfig &config, bool emitS
 
         // Emit a signal to the main thread to update the progress bar
         if (emitSignals) {
-            QString status = QString("%1/%2").arg(i + 1, config.framesToStack);
+            QString status = QString("%1/%2").arg(i + 1).arg(config.framesToStack);
             emit progressUpdated(status);
         }
     }
