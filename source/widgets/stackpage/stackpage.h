@@ -5,6 +5,7 @@
 #include <QFutureWatcher>
 #include "components/display.h"
 #include "modules/stacker.h"
+#include "modules/mediamanager.h"
 
 namespace Ui {
 class StackPage;
@@ -18,9 +19,9 @@ public:
     ~StackPage();
 
 private slots:
-    void on_selectFilesPushButton_clicked();
-    void on_estimateAPGridPushButton_clicked();
-    void on_stackPushButton_clicked();
+    void selectFiles();
+    void estimateAPGrid();
+    void stack();
 
 signals:
     void sortingProgressUpdated(int current);
@@ -30,7 +31,7 @@ private:
     // UI
     Ui::StackPage *ui;
     void connectUI();
-    void updateUI();
+    void updateOutputDimensions();
     void enableConfigEdit();
 
     // Display
@@ -38,9 +39,12 @@ private:
     void displayFrame(const int frameNumber);
     int currentFrame = 0;
 
+    MediaManager manager;
+
+    StackSource source;
+    StackConfig config;
     Stacker stacker;
 
-    int totalFrames = 0;
     void analyzeFrames();
 };
 
