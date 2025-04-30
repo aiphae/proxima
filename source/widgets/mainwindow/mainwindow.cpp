@@ -9,11 +9,8 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-
     setWindowTitle("Proxima v1.0");
-
     initializePages();
-
     connectButtons();
 }
 
@@ -42,9 +39,6 @@ void MainWindow::connectButtons() {
     connect(ui->homePushButton, &QPushButton::clicked, this, [this]() {
         updateCurrentPage(static_cast<int>(Pages::Home));
     });
-
-    // Settings button
-    // Later ...
 }
 
 void MainWindow::updateCurrentPage(int pageIndex) {
