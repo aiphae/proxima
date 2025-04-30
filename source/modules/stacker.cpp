@@ -1,11 +1,11 @@
 #include "stacker.h"
-#include "components/helpers.h"
 #include "components/frame.h"
 
-cv::Mat Stacker::stack() {
-    return config.localAlign ? stackLocal(true) : stackGlobal(true, true);
+cv::Mat Stacker::stack(StackSource &source, StackConfig &config) {
+    return config.localAlign ? stackLocal(source, config, true) : stackGlobal(source, config, true, true);
 }
 
+//
 // Performs global stacking.
 //
 // Each frame is warped globally via phase correlation.
@@ -13,8 +13,8 @@ cv::Mat Stacker::stack() {
 // 'bool emitSignals' - whether to send the GUI-updating signal to the main thread.
 // 'bool crop' - whether to crop the resulting image according to the config values.
 //
-cv::Mat Stacker::stackGlobal(bool emitSignals, bool crop) {
-    cv::Mat reference = getMatAtFrame(source.files, source.sorted[0].first);
+cv::Mat Stacker::stackGlobal(StackSource &source, StackConfig &config, bool emitSignals, bool crop) {
+    cv::Mat reference = source.manager.matAtFrame(source.sorted[0].first);
     if (reference.empty()) {
         return {};
     }
@@ -32,7 +32,7 @@ cv::Mat Stacker::stackGlobal(bool emitSignals, bool crop) {
     referenceGray.convertTo(referenceGray, CV_32F);
 
     for (int i = 0; i < config.framesToStack; ++i) {
-        cv::Mat current = getMatAtFrame(source.files, source.sorted[i].first);
+        cv::Mat current = source.manager.matAtFrame(source.sorted[i].first);
         if (current.empty()) {
             continue;
         }
@@ -86,6 +86,7 @@ cv::Mat Stacker::stackGlobal(bool emitSignals, bool crop) {
     return result;
 }
 
+//
 // Performs local stacking.
 //
 // For each frame, each AP from 'source.aps' is shifted
@@ -93,8 +94,8 @@ cv::Mat Stacker::stackGlobal(bool emitSignals, bool crop) {
 //
 // 'bool emitSignals' - whether to send the GUI-updating signal to the main thread.
 //
-cv::Mat Stacker::stackLocal(bool emitSignals) {
-    cv::Mat reference = getMatAtFrame(source.files, source.sorted[0].first);
+cv::Mat Stacker::stackLocal(StackSource &source, StackConfig &config, bool emitSignals) {
+    cv::Mat reference = source.manager.matAtFrame(source.sorted[0].first);
     if (reference.empty()) {
         return {};
     }
@@ -112,7 +113,7 @@ cv::Mat Stacker::stackLocal(bool emitSignals) {
     referenceGray.convertTo(referenceGray, CV_32F);
 
     for (int i = 0; i < config.framesToStack; ++i) {
-        cv::Mat current = getMatAtFrame(source.files, source.sorted[i].first);
+        cv::Mat current = source.manager.matAtFrame(source.sorted[i].first);
         if (current.empty()) {
             continue;
         }
@@ -239,7 +240,7 @@ cv::Mat Stacker::stackLocal(bool emitSignals) {
     }
 
     // Get global stack for fallback
-    cv::Mat stackedGlobal = stackGlobal(false, false);
+    cv::Mat stackedGlobal = stackGlobal(source, config, false, false);
     stackedGlobal.convertTo(stackedGlobal, CV_32FC3);
 
     // Combine local and global stacks
