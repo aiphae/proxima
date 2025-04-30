@@ -9,6 +9,7 @@ SOURCES += \
     source/components/mediafile.cpp \
     source/concurrency/threadpool.cpp \
     source/main.cpp \
+    source/modules/mediamanager.cpp \
     source/modules/stacker.cpp \
     source/widgets/homepage/homepage.cpp \
     source/widgets/mainwindow/mainwindow.cpp \
@@ -22,6 +23,7 @@ HEADERS += \
     source/components/helpers.h \
     source/components/mediafile.h \
     source/concurrency/threadpool.h \
+    source/modules/mediamanager.h \
     source/modules/stacker.h \
     source/widgets/homepage/homepage.h \
     source/widgets/mainwindow/mainwindow.h \
