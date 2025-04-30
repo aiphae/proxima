@@ -6,7 +6,7 @@
 #include <QMessageBox>
 
 // A helper function to build a filter with supported media files for user input
-inline QString fileFilters();
+QString fileFilters();
 
 StackPage::StackPage(QWidget *parent)
     : QWidget(parent)
