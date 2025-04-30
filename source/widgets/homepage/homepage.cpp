@@ -6,7 +6,6 @@ HomePage::HomePage(QWidget *parent)
     , ui(new Ui::HomePage)
 {
     ui->setupUi(this);
-
     connectButtons();
 }
 
