@@ -2,7 +2,6 @@
 #define MEDIAFILE_H
 
 #include <opencv2/opencv.hpp>
-#include <QPixmap>
 #include <QSet>
 
 // Allowed image extensions
