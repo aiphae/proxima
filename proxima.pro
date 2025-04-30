@@ -20,7 +20,6 @@ HEADERS += \
     source/components/alignmentpoint.h \
     source/components/display.h \
     source/components/frame.h \
-    source/components/helpers.h \
     source/components/mediafile.h \
     source/concurrency/threadpool.h \
     source/modules/mediamanager.h \

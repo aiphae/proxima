@@ -1,10 +1,12 @@
 #include "stackpage.h"
 #include "ui_stackpage.h"
-#include "components/helpers.h"
 #include "components/frame.h"
 #include "concurrency/threadpool.h"
 #include <QFileDialog>
 #include <QMessageBox>
+
+// A helper function to build a filter with supported media files for user input
+inline QString fileFilters();
 
 StackPage::StackPage(QWidget *parent)
     : QWidget(parent)
@@ -255,4 +257,22 @@ void StackPage::updateOutputDimensions() {
     ui->heightSpinBox->blockSignals(true);
     ui->heightSpinBox->setValue(config.outputHeight);
     ui->heightSpinBox->blockSignals(false);
+}
+
+QString fileFilters() {
+    auto buildFilter = [](const QString &description, const QSet<QString> &extensions) {
+        QStringList patterns;
+        for (const QString &extension : extensions) {
+            patterns << "*" + extension;
+        }
+        return QString("%1 (%2)").arg(description, patterns.join(' '));
+    };
+
+    QString imageFilter = buildFilter("Image Files", imageExtensions);
+    QString videoFilter = buildFilter("Video Files", videoExtensions);
+
+    QSet<QString> allExtensions = imageExtensions + videoExtensions;
+    QString allFilter = buildFilter("All Supported Files", allExtensions);
+
+    return allFilter + ";;" + imageFilter + ";;" + videoFilter;
 }
