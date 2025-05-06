@@ -252,60 +252,28 @@
             <property name="bottomMargin">
              <number>0</number>
             </property>
-            <item row="2" column="3">
-             <widget class="QRadioButton" name="uniformBasedApPlacement">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>30</height>
-               </size>
-              </property>
+            <item row="4" column="1" colspan="2">
+             <widget class="QCheckBox" name="showApsCheckBox">
               <property name="text">
-               <string>Uniform</string>
-              </property>
-              <property name="checked">
-               <bool>false</bool>
+               <string>Show alignment points</string>
               </property>
              </widget>
             </item>
-            <item row="3" column="3">
+            <item row="3" column="1">
+             <widget class="QLabel" name="apAmountLabel">
+              <property name="text">
+               <string>AP amount:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="2">
              <widget class="QLabel" name="apAmountEdit">
               <property name="text">
                <string/>
               </property>
              </widget>
             </item>
-            <item row="1" column="1" rowspan="2">
-             <widget class="QLabel" name="apPlacementLabel">
-              <property name="text">
-               <string>AP placement:</string>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="1">
-             <widget class="QLabel" name="apSizeLabel">
-              <property name="text">
-               <string>AP size:</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="3">
-             <widget class="QRadioButton" name="featureBasedApPlacement">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>30</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>Feature-based</string>
-              </property>
-              <property name="checked">
-               <bool>true</bool>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="3">
+            <item row="0" column="2">
              <widget class="QSpinBox" name="apSizeSpinBox">
               <property name="minimumSize">
                <size>
@@ -324,15 +292,15 @@
               </property>
              </widget>
             </item>
-            <item row="3" column="1">
-             <widget class="QLabel" name="apAmountLabel">
+            <item row="0" column="1">
+             <widget class="QLabel" name="apSizeLabel">
               <property name="text">
-               <string>AP amount:</string>
+               <string>AP size:</string>
               </property>
              </widget>
             </item>
-            <item row="4" column="1" colspan="3">
-             <widget class="QPushButton" name="estimateAPGridPushButton">
+            <item row="1" column="2">
+             <widget class="QRadioButton" name="featureBasedApPlacement">
               <property name="minimumSize">
                <size>
                 <width>0</width>
@@ -340,7 +308,33 @@
                </size>
               </property>
               <property name="text">
-               <string>Estimate AP grid</string>
+               <string>Feature-based</string>
+              </property>
+              <property name="checked">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="2">
+             <widget class="QRadioButton" name="uniformBasedApPlacement">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>30</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>Uniform</string>
+              </property>
+              <property name="checked">
+               <bool>false</bool>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1" rowspan="2">
+             <widget class="QLabel" name="apPlacementLabel">
+              <property name="text">
+               <string>AP placement:</string>
               </property>
              </widget>
             </item>

@@ -1,5 +1,6 @@
 #include "frame.h"
 
+//
 // Centers an object in 'frame' by detecting the largest contour and
 // adjusting a bounding rectangle to 'width' and 'height'.
 //
@@ -52,6 +53,24 @@ cv::Mat Frame::centerObject(cv::Mat frame, int width, int height) {
     return black;
 }
 
+//
+// Expands 'frame' in all directions to match 'width' and 'height'.
+//
+// Fills new borders with black.
+//
+cv::Mat Frame::expandBorders(cv::Mat frame, int width, int height) {
+    int top = std::max(0, (height - frame.rows) / 2);
+    int bottom = std::max(0, height - frame.rows - top);
+    int left = std::max(0, (width - frame.cols) / 2);
+    int right = std::max(0, width - frame.cols - left);
+
+    cv::Mat bordered;
+    cv::copyMakeBorder(frame, bordered, top, bottom, left, right, cv::BORDER_CONSTANT);
+
+    return bordered;
+}
+
+//
 // Estimates the quality of 'frame' by measuring its sharpness.
 //
 // Sharpness is calculated as the mean of the capped gradient magnitude,
@@ -88,105 +107,7 @@ double Frame::estimateQuality(cv::Mat frame) {
     return cv::mean(capped)[0];
 }
 
-// Arranges alignment points over 'frame' based on the specified placement mode.
 //
-// Two modes (APPlacement enum):
-// - FeatureBased: uses corner detection (cv::goodFeaturesToTrack());
-// - Uniform: places the points evenly over the detected object.
-//
-std::vector<AlignmentPoint> Frame::getAps(cv::Mat frame, int apSize, APPlacement placement) {
-    std::vector<AlignmentPoint> aps;
-
-    cv::Mat processed;
-    cv::cvtColor(frame, processed, cv::COLOR_BGR2GRAY);
-
-    std::vector<cv::Point> cvAps;
-
-    if (placement == APPlacement::FeatureBased) {
-        // Detect strong corners
-        processed.convertTo(processed, CV_32FC1);
-        cv::blur(processed, processed, {3, 3});
-        cv::goodFeaturesToTrack(processed, cvAps, 150, 0.5, apSize / 2);
-    }
-    else {
-        cv::threshold(processed, processed, 0, 255, cv::THRESH_BINARY | cv::THRESH_OTSU);
-        cv::blur(processed, processed, {5, 5});
-
-        std::vector<std::vector<cv::Point>> contours;
-        cv::findContours(processed, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
-        if (contours.empty()) {
-            return {};
-        }
-
-        // Lambda to find the largest contour by area
-        auto largestContour = [](std::vector<std::vector<cv::Point>> &contours) -> int {
-            int largestContour = 0;
-            double maxArea = 0.0;
-            for (int i = 0; i < contours.size(); ++i) {
-                double area = cv::contourArea(contours[i]);
-                if (area > maxArea) {
-                    maxArea = area;
-                    largestContour = i;
-                }
-            }
-            return largestContour;
-        };
-
-        // Distance between alignment points
-        const int step = apSize / 2;
-
-        // Create mask of the largest contour
-        cv::Mat mask = cv::Mat::zeros(frame.size(), CV_8UC1);
-        cv::drawContours(mask, contours, largestContour(contours), 255, cv::FILLED);
-
-        // Erode the mask so the points aren't placed too close to the edges
-        cv::Mat kernel = cv::Mat::ones(2 * step, 2 * step, CV_8UC1);
-        cv::erode(mask, mask, cv::Mat::ones(step, step, CV_8UC1));
-
-        while (cv::countNonZero(mask) > 0) {
-            std::vector<std::vector<cv::Point>> layerContours;
-            cv::findContours(mask, layerContours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_NONE);
-
-            // Find the largest contour in the current layer
-            std::vector<cv::Point> contour = layerContours[largestContour(layerContours)];
-
-            // Arc length of the countour
-            double arcLen = cv::arcLength(contour, true);
-            // Number of points to place
-            int amount = std::max(1, static_cast<int>(arcLen / apSize * 1.4));
-
-            for (int i = 0; i < amount; ++i) {
-                // Target distance along the contour for the current point
-                double targetDist = (arcLen * i) / amount;
-                double running = 0.0;
-                // Iterate through contour segments to find the point at the target distance
-                for (size_t j = 1; j < contour.size(); ++j) {
-                    cv::Point2f p1 = contour[j - 1];
-                    cv::Point2f p2 = contour[j];
-                    double segLen = cv::norm(p2 - p1);
-                    if (running + segLen >= targetDist) {
-                        // Interpolate to find the exact point
-                        double alpha = (targetDist - running) / segLen;
-                        cv::Point2f pt = p1 + alpha * (p2 - p1);
-                        cvAps.push_back(pt);
-                        break;
-                    }
-                    running += segLen;
-                }
-            }
-
-            // Further erode to go 'deeper'
-            cv::erode(mask, mask, kernel);
-        }
-    }
-
-    for (const auto &cvAp : cvAps) {
-        aps.emplace_back(cvAp.x, cvAp.y, apSize);
-    }
-
-    return aps;
-}
-
 // Computed the translational shifty between 'reference' and 'target'
 // using phase correlation.
 //

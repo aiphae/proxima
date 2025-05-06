@@ -35,7 +35,7 @@ auto ThreadPool::enqueue(F&& f, Args&&... args)
 
     auto task = std::make_shared<std::packaged_task<return_type()>>(
         std::bind(std::forward<F>(f), std::forward<Args>(args)...)
-    );
+        );
 
     std::future<return_type> res = task->get_future();
     {
@@ -47,6 +47,37 @@ auto ThreadPool::enqueue(F&& f, Args&&... args)
     }
     condition.notify_one();
     return res;
+}
+
+inline ThreadPool::ThreadPool(int threadNumber) : stop(false) {
+    for (int i = 0; i < threadNumber; ++i) {
+        workers.emplace_back([this] {
+            for (;;) {
+                std::function<void()> task;
+                {
+                    std::unique_lock<std::mutex> lock(queueMutex);
+                    condition.wait(lock, [this] { return stop || !tasks.empty(); });
+                    if (stop && tasks.empty()) {
+                        return;
+                    }
+                    task = std::move(tasks.front());
+                    tasks.pop();
+                }
+                task();
+            }
+        });
+    }
+}
+
+inline ThreadPool::~ThreadPool() {
+    {
+        std::unique_lock<std::mutex> lock(queueMutex);
+        stop = true;
+    }
+    condition.notify_all();
+    for (auto &worker : workers) {
+        worker.join();
+    }
 }
 
 #endif // THREADPOOL_H

@@ -2,13 +2,13 @@
 #define STACKPAGE_H
 
 #include <QWidget>
-#include <QFutureWatcher>
 #include "components/display.h"
-#include "modules/stacker.h"
-#include "modules/mediamanager.h"
+#include "data/mediamanager.h"
+#include "stacking/sortingthread.h"
+#include "stacking/stackingthread.h"
 
 namespace Ui {
-class StackPage;
+    class StackPage;
 }
 
 class StackPage : public QWidget {
@@ -23,12 +23,8 @@ private slots:
     void estimateAPGrid();
     void stack();
 
-signals:
-    void sortingProgressUpdated(int current);
-    void analyzingCompleted();
-
 private:
-    // UI
+    // UI and responsiveness
     Ui::StackPage *ui;
     void connectUI();
     void updateOutputDimensions();
@@ -39,13 +35,20 @@ private:
     void displayFrame(const int frameNumber);
     int currentFrame = 0;
 
+    // Manages opened files
     MediaManager manager;
 
-    StackSource source;
+    // Stacking configuration
     StackConfig config;
-    Stacker stacker;
+    void initializeConfig();
 
-    void analyzeFrames();
+    // Separate threads to keep the UI responsive
+    SortingThread sortingThread;
+    StackingThread stackingThread;
+
+    // Needed to initialize 'stackingThread'
+    QString outputDir;
+    std::vector<int> percentages;
 };
 
 #endif // STACKPAGE_H

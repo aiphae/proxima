@@ -1,7 +1,7 @@
 #ifndef MEDIAMANAGER_H
 #define MEDIAMANAGER_H
 
-#include "components/mediafile.h"
+#include "data/mediafile.h"
 #include <vector>
 
 class MediaManager {
