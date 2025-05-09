@@ -1,7 +1,6 @@
 #ifndef FRAME_H
 #define FRAME_H
 
-#include "stacking/alignment.h"
 #include <opencv2/opencv.hpp>
 
 class Frame {

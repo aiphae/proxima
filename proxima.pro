@@ -5,9 +5,13 @@ CONFIG += c++20
 SOURCES += \
     source/components/display.cpp \
     source/components/frame.cpp \
+    source/components/image.cpp \
     source/main.cpp \
     source/data/mediafile.cpp \
     source/data/mediamanager.cpp \
+    source/processing/deconvolution.cpp \
+    source/processing/imageprocessor.cpp \
+    source/processing/wavelets.cpp \
     source/stacking/alignment.cpp \
     source/stacking/sortingthread.cpp \
     source/stacking/stacker.cpp \
@@ -20,6 +24,10 @@ SOURCES += \
 HEADERS += \
     source/components/display.h \
     source/components/frame.h \
+    source/components/image.h \
+    source/processing/deconvolution.h \
+    source/processing/imageprocessor.h \
+    source/processing/wavelets.h \
     source/stacking/alignment.h \
     source/stacking/sortingthread.h \
     source/stacking/stackingthread.h \
@@ -53,3 +61,5 @@ else:unix: LIBS += -L$$PWD/../../../../../libs/opencv/build/x64/vc16/lib/ -lopen
 
 INCLUDEPATH += $$PWD/../../../../../libs/opencv/build/include
 DEPENDPATH += $$PWD/../../../../../libs/opencv/build/include
+
+DISTFILES +=
