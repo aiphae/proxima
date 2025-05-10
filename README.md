@@ -1,5 +1,11 @@
-Proxima.
+# Proxima
+## Overview
+Planetary astorphotography processing software.
 
-Planetary astrophotography processing tool.
-
-In development...
+Expected features:
+ - Local and global stacking;
+ - Drizzle;
+ - Color correction;
+ - Deconvolution;
+ - Wavelets;
+ - RAW formats support.
