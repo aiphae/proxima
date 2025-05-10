@@ -3,9 +3,10 @@
 Planetary astorphotography processing software.
 
 Expected features:
+ - RAW formats support;
  - Local and global stacking;
  - Drizzle;
  - Color correction;
  - Deconvolution;
  - Wavelets;
- - RAW formats support.
+ - RGB align;
