@@ -5,10 +5,10 @@ CONFIG += c++20
 SOURCES += \
     source/components/display.cpp \
     source/components/frame.cpp \
-    source/components/image.cpp \
     source/main.cpp \
     source/data/mediafile.cpp \
     source/data/mediamanager.cpp \
+    source/processing/colorcorrection.cpp \
     source/processing/deconvolution.cpp \
     source/processing/imageprocessor.cpp \
     source/processing/wavelets.cpp \
@@ -24,7 +24,7 @@ SOURCES += \
 HEADERS += \
     source/components/display.h \
     source/components/frame.h \
-    source/components/image.h \
+    source/processing/colorcorrection.h \
     source/processing/deconvolution.h \
     source/processing/imageprocessor.h \
     source/processing/wavelets.h \
@@ -42,6 +42,7 @@ HEADERS += \
     source/widgets/stackpage/stackpage.h
 
 FORMS += \
+    source/form.ui \
     source/widgets/homepage/homepage.ui \
     source/widgets/mainwindow/mainwindow.ui \
     source/widgets/processpage/processpage.ui \

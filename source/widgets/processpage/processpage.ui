@@ -41,13 +41,16 @@
      </property>
      <layout class="QVBoxLayout" name="verticalLayout">
       <item>
-       <widget class="QGroupBox" name="groupBox">
+       <widget class="QGroupBox" name="inputGroupBox">
         <property name="title">
          <string>Input</string>
         </property>
+        <property name="flat">
+         <bool>true</bool>
+        </property>
         <layout class="QGridLayout" name="gridLayout_2">
          <item row="0" column="0" colspan="2">
-          <widget class="QPushButton" name="pushButton">
+          <widget class="QPushButton" name="selectFilePushButton">
            <property name="minimumSize">
             <size>
              <width>0</width>
@@ -60,14 +63,14 @@
           </widget>
          </item>
          <item row="1" column="0">
-          <widget class="QLabel" name="label_2">
+          <widget class="QLabel" name="selectedFileLabel">
            <property name="text">
             <string>Selected file:</string>
            </property>
           </widget>
          </item>
          <item row="1" column="1">
-          <widget class="QLabel" name="label_3">
+          <widget class="QLabel" name="selectedFileEdit">
            <property name="text">
             <string/>
            </property>
@@ -77,41 +80,33 @@
        </widget>
       </item>
       <item>
-       <widget class="QGroupBox" name="groupBox_4">
-        <property name="title">
-         <string>Deconvolution</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QGroupBox" name="groupBox_5">
+       <widget class="QGroupBox" name="waveletsGroupBox">
         <property name="title">
          <string>Wavelets</string>
         </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QGroupBox" name="groupBox_6">
-        <property name="title">
-         <string>RGB align</string>
+        <property name="flat">
+         <bool>true</bool>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QGroupBox" name="groupBox_2">
+       <widget class="QGroupBox" name="colorCorrectionGroupBox">
         <property name="title">
          <string>Color correction</string>
         </property>
+        <property name="flat">
+         <bool>true</bool>
+        </property>
         <layout class="QVBoxLayout" name="verticalLayout_2">
          <item>
-          <widget class="QLabel" name="label_4">
+          <widget class="QLabel" name="brightnessLabel">
            <property name="text">
             <string>Brightness</string>
            </property>
           </widget>
          </item>
          <item>
-          <widget class="QSlider" name="horizontalSlider">
+          <widget class="QSlider" name="brightnessSlider">
            <property name="minimum">
             <number>-100</number>
            </property>
@@ -133,14 +128,14 @@
           </widget>
          </item>
          <item>
-          <widget class="QLabel" name="label_5">
+          <widget class="QLabel" name="contrastLabel">
            <property name="text">
             <string>Contrast</string>
            </property>
           </widget>
          </item>
          <item>
-          <widget class="QSlider" name="horizontalSlider_2">
+          <widget class="QSlider" name="contrastSlider">
            <property name="minimum">
             <number>-100</number>
            </property>
@@ -153,14 +148,14 @@
           </widget>
          </item>
          <item>
-          <widget class="QLabel" name="label_6">
+          <widget class="QLabel" name="saturationLabel">
            <property name="text">
             <string>Saturation</string>
            </property>
           </widget>
          </item>
          <item>
-          <widget class="QSlider" name="horizontalSlider_3">
+          <widget class="QSlider" name="saturationSlider">
            <property name="minimum">
             <number>-100</number>
            </property>
@@ -189,13 +184,16 @@
        </spacer>
       </item>
       <item>
-       <widget class="QGroupBox" name="groupBox_3">
+       <widget class="QGroupBox" name="outputGroupBox">
         <property name="title">
          <string>Output</string>
         </property>
+        <property name="flat">
+         <bool>true</bool>
+        </property>
         <layout class="QGridLayout" name="gridLayout_3">
          <item row="0" column="0">
-          <widget class="QPushButton" name="pushButton_2">
+          <widget class="QPushButton" name="saveAsPushButton">
            <property name="minimumSize">
             <size>
              <width>0</width>
@@ -214,9 +212,12 @@
     </widget>
    </item>
    <item row="0" column="1">
-    <widget class="QLabel" name="label">
+    <widget class="QLabel" name="imageDisplay">
      <property name="text">
       <string/>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignmentFlag::AlignCenter</set>
      </property>
     </widget>
    </item>

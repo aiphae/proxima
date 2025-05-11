@@ -1,28 +1,29 @@
 #ifndef IMAGEPROCESSOR_H
 #define IMAGEPROCESSOR_H
 
-#include "components/image.h"
+#include "processing/colorcorrection.h"
+#include "processing/deconvolution.h"
+#include "processing/wavelets.h"
 
 class ImageProcessor {
 public:
-    ImageProcessor(Image &image) : image(image) {}
+    ImageProcessor() {}
+    void load(cv::Mat mat);
+    void apply();
+    cv::Mat mat() const { return clone; }
+    void reset();
+
     void setBrightness(int value);
     void setContrast(int value);
     void setSaturation(int value);
-    void apply();
-    cv::Mat mat() const { return image.mat(); }
 
 private:
-    Image image;
+    cv::Mat original;
+    cv::Mat clone;
 
-    int brightness = 0;
-    int contrast = 0;
-    int saturation = 0;
-
-    cv::Matx33f M = cv::Matx33f::eye();
-    cv::Vec3f bias = cv::Vec3f{0, 0, 0};
-
-    void updateMatrix();
+    ColorCorrection colorCorrection;
+    Deconvolution deconvolution;
+    Wavelets wavelets;
 };
 
 #endif // IMAGEPROCESSOR_H
