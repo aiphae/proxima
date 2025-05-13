@@ -8,14 +8,11 @@ void ImageProcessor::load(cv::Mat mat) {
 void ImageProcessor::reset() {
     clone = original.clone();
     colorCorrection.reset();
-    // deconvolution.reset();
     // wavelets.reset();
 }
 
 void ImageProcessor::apply() {
     clone = original.clone();
-
-    // Deconvolution
 
     // Wavelets
 

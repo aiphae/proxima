@@ -4,8 +4,8 @@
 #include <QWidget>
 #include "components/display.h"
 #include "data/mediamanager.h"
-#include "stacking/sortingthread.h"
-#include "stacking/stackingthread.h"
+#include "threads/sortingthread.h"
+#include "threads/stackingthread.h"
 
 namespace Ui {
     class StackPage;

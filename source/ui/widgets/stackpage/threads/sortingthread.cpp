@@ -1,5 +1,5 @@
 #include "sortingthread.h"
-#include "concurrency/threadpool.h"
+#include "threading/threadpool.h"
 #include "components/frame.h"
 
 SortingThread::SortingThread(

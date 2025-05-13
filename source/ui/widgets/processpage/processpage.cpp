@@ -2,6 +2,8 @@
 #include "ui_processpage.h"
 #include <QFileDialog>
 #include <QDesktopServices>
+#include "deconvolutiondialog/deconvolutiondialog.h"
+#include "rgbaligndialog/rgbaligndialog.h"
 
 ProcessPage::ProcessPage(QWidget *parent)
     : QWidget(parent)
@@ -29,7 +31,6 @@ void ProcessPage::selectFile() {
     }
 
     processor.load(cv::imread(file.toStdString()));
-
     display->show(processor.mat());
 }
 
@@ -65,5 +66,15 @@ void ProcessPage::connectUI() {
         processor.setSaturation(ui->saturationSlider->value());
         processor.apply();
         display->show(processor.mat());
+    });
+
+    connect(ui->deconvolutionPushButton, &QPushButton::clicked, this, [this]() {
+        auto dialog = new DeconvolutionDialog(processor.orig(), this);
+        dialog->exec();
+    });
+
+    connect(ui->rgbAlignPushButton, &QPushButton::clicked, this, [this]() {
+        auto dialog = new RGBAlignDialog(this);
+        dialog->exec();
     });
 }

@@ -1,7 +1,7 @@
 #ifndef STACKINGTHREAD_H
 #define STACKINGTHREAD_H
 
-#include "concurrency/thread.h"
+#include "threading/thread.h"
 #include "stacking/stacker.h"
 #include "data/mediamanager.h"
 #include <QObject>

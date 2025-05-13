@@ -5,10 +5,12 @@
 
 class ColorCorrection {
 public:
-    ColorCorrection() {}
+    ColorCorrection() = default;
+
     int brightness = 0;
     int contrast = 0;
     int saturation = 0;
+
     void apply(cv::Mat &mat);
     void reset();
 

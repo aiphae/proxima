@@ -3,54 +3,62 @@ QT += widgets core gui
 CONFIG += c++20
 
 SOURCES += \
-    source/components/display.cpp \
-    source/components/frame.cpp \
-    source/main.cpp \
-    source/data/mediafile.cpp \
-    source/data/mediamanager.cpp \
-    source/processing/colorcorrection.cpp \
-    source/processing/deconvolution.cpp \
-    source/processing/imageprocessor.cpp \
-    source/processing/wavelets.cpp \
-    source/stacking/alignment.cpp \
-    source/stacking/sortingthread.cpp \
-    source/stacking/stacker.cpp \
-    source/stacking/stackingthread.cpp \
-    source/widgets/homepage/homepage.cpp \
-    source/widgets/mainwindow/mainwindow.cpp \
-    source/widgets/processpage/processpage.cpp \
-    source/widgets/stackpage/stackpage.cpp
+    source/core/components/display.cpp \
+    source/core/components/frame.cpp \
+    source/core/data/mediafile.cpp \
+    source/core/data/mediamanager.cpp \
+    source/core/processing/imageprocessor.cpp \
+    source/core/processing/colorcorrection.cpp \
+    source/core/processing/deconvolution.cpp \
+    source/core/processing/wavelets.cpp \
+    source/core/stacking/alignment.cpp \
+    source/core/stacking/stacker.cpp \
+    source/ui/dialogs/deconvolutiondialog/deconvolutiondialog.cpp \
+    source/ui/dialogs/rgbaligndialog/rgbaligndialog.cpp \
+    source/ui/widgets/homepage/homepage.cpp \
+    source/ui/widgets/mainwindow/mainwindow.cpp \
+    source/ui/widgets/processpage/processpage.cpp \
+    source/ui/widgets/stackpage/stackpage.cpp \
+    source/ui/widgets/stackpage/threads/sortingthread.cpp \
+    source/ui/widgets/stackpage/threads/stackingthread.cpp \
+    source/main.cpp
 
 HEADERS += \
-    source/components/display.h \
-    source/components/frame.h \
-    source/processing/colorcorrection.h \
-    source/processing/deconvolution.h \
-    source/processing/imageprocessor.h \
-    source/processing/wavelets.h \
-    source/stacking/alignment.h \
-    source/stacking/sortingthread.h \
-    source/stacking/stackingthread.h \
-    source/concurrency/thread.h \
-    source/concurrency/threadpool.h \
-    source/data/mediafile.h \
-    source/data/mediamanager.h \
-    source/stacking/stacker.h \
-    source/widgets/homepage/homepage.h \
-    source/widgets/mainwindow/mainwindow.h \
-    source/widgets/processpage/processpage.h \
-    source/widgets/stackpage/stackpage.h
+    source/core/components/display.h \
+    source/core/components/frame.h \
+    source/core/data/mediafile.h \
+    source/core/data/mediamanager.h \
+    source/core/processing/imageprocessor.h \
+    source/core/processing/colorcorrection.h \
+    source/core/processing/deconvolution.h \
+    source/core/processing/wavelets.h \
+    source/core/stacking/alignment.h \
+    source/core/stacking/stacker.h \
+    source/threading/thread.h \
+    source/threading/threadpool.h \
+    source/ui/dialogs/deconvolutiondialog/deconvolutiondialog.h \
+    source/ui/dialogs/rgbaligndialog/rgbaligndialog.h \
+    source/ui/widgets/homepage/homepage.h \
+    source/ui/widgets/mainwindow/mainwindow.h \
+    source/ui/widgets/processpage/processpage.h \
+    source/ui/widgets/stackpage/stackpage.h \
+    source/ui/widgets/stackpage/threads/sortingthread.h \
+    source/ui/widgets/stackpage/threads/stackingthread.h
 
 FORMS += \
-    source/form.ui \
-    source/widgets/homepage/homepage.ui \
-    source/widgets/mainwindow/mainwindow.ui \
-    source/widgets/processpage/processpage.ui \
-    source/widgets/stackpage/stackpage.ui
+    source/ui/dialogs/deconvolutiondialog/deconvolutiondialog.ui \
+    source/ui/dialogs/rgbaligndialog/rgbaligndialog.ui \
+    source/ui/widgets/homepage/homepage.ui \
+    source/ui/widgets/mainwindow/mainwindow.ui \
+    source/ui/widgets/processpage/processpage.ui \
+    source/ui/widgets/stackpage/stackpage.ui \
+    source/form.ui
 
 INCLUDEPATH += \
     source \
-    source/widgets
+    source/core \
+    source/ui/widgets \
+    source/ui/dialogs
 
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin

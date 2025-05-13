@@ -1,7 +1,7 @@
 #ifndef SORTINGTHREAD_H
 #define SORTINGTHREAD_H
 
-#include "concurrency/thread.h"
+#include "threading/thread.h"
 #include "data/mediamanager.h"
 
 class SortingThread : public Thread {

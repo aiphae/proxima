@@ -1,5 +1,5 @@
 #include "stackpage.h"
-#include "stacking/stackingthread.h"
+#include "threads/stackingthread.h"
 #include "ui_stackpage.h"
 #include "components/frame.h"
 #include <QFileDialog>
