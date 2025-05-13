@@ -11,7 +11,7 @@ public:
     void load(cv::Mat mat);
     void apply();
     cv::Mat mat() const { return clone; }
-    cv::Mat& orig() { return original; }
+    cv::Mat orig() const { return original; }
     void reset();
 
     void setBrightness(int value);

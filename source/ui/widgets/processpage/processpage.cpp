@@ -4,6 +4,7 @@
 #include <QDesktopServices>
 #include "deconvolutiondialog/deconvolutiondialog.h"
 #include "rgbaligndialog/rgbaligndialog.h"
+#include "components/frame.h"
 
 ProcessPage::ProcessPage(QWidget *parent)
     : QWidget(parent)
@@ -69,7 +70,10 @@ void ProcessPage::connectUI() {
     });
 
     connect(ui->deconvolutionPushButton, &QPushButton::clicked, this, [this]() {
-        auto dialog = new DeconvolutionDialog(processor.orig(), this);
+        cv::Mat original = processor.orig();
+        int size = std::min(std::min(original.cols, original.rows), 200);
+        original = Frame::centerObject(original, size, size);
+        auto dialog = new DeconvolutionDialog(original, this);
         dialog->exec();
     });
 

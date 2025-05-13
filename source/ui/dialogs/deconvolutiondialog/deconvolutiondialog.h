@@ -24,7 +24,7 @@ private:
     Deconvolution::Config config;
     cv::Mat &mat;
 
-    void computePSF();
+    void updatePSF();
 
     static constexpr int defaultIterations = 30;
     static constexpr double defaultPSFSize = 1.5;
