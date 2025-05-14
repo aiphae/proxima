@@ -206,7 +206,7 @@ cv::Mat Stacker::stackLocal(MediaManager &manager, StackConfig &config, bool emi
                 safeRoi.y - paddedRoi.y,
                 safeRoi.width,
                 safeRoi.height
-                );
+            );
             cv::Mat cropped = warpedPatch(roiInPadded);
 
             for (int y = 0; y < safeRoi.height; ++y) {
