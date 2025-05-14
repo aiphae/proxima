@@ -70,10 +70,14 @@ void ProcessPage::connectUI() {
     });
 
     connect(ui->deconvolutionPushButton, &QPushButton::clicked, this, [this]() {
-        cv::Mat original = processor.orig();
-        int size = std::min(std::min(original.cols, original.rows), 200);
-        original = Frame::centerObject(original, size, size);
+        cv::Mat original = processor.orig();        
         auto dialog = new DeconvolutionDialog(original, this);
+
+        connect(dialog, &DeconvolutionDialog::apply, this, [this](cv::Mat mat) {
+            processor.load(mat);
+            display->show(processor.mat());
+        });
+
         dialog->exec();
     });
 

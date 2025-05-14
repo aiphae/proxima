@@ -1,18 +1,21 @@
 #include "deconvolutiondialog.h"
 #include "ui_deconvolutiondialog.h"
-#include "threading/thread.h"
+#include "components/frame.h"
 
 DeconvolutionDialog::DeconvolutionDialog(cv::Mat &mat, QWidget *parent)
     : QDialog(parent)
     , ui(new Ui::DeconvolutionDialog)
-    , mat(mat)
+    , original(mat)
 {
     ui->setupUi(this);
+
+    int previewSize = std::min(std::min(original.cols, original.rows), 200);
+    preview = Frame::centerObject(original, previewSize, previewSize);
 
     imageDisplay = std::make_unique<Display>(ui->previewDisplay);
     psfDisplay = std::make_unique<Display>(ui->psfDisplay);
 
-    imageDisplay->show(mat);
+    imageDisplay->show(preview);
 
     connect(ui->iterationsSpinBox, &QSpinBox::valueChanged, this, [this](int value) {
         ui->iterationsSlider->blockSignals(true);
@@ -54,16 +57,11 @@ DeconvolutionDialog::DeconvolutionDialog(cv::Mat &mat, QWidget *parent)
     });
 
     connect(ui->previewPushButton, &QPushButton::clicked, this, [this]() {
-        std::thread([this]() {
-            cv::Mat result = Deconvolution::deconvolve(this->mat, Deconvolution::LucyRichardson, this->config,
-                [this](int iteration) {
-                    QMetaObject::invokeMethod(this, [this, iteration] {
-                        ui->progressEdit->setText(QString::number(iteration));
-                    });
-                }
-            );
-            imageDisplay->show(result);
-        }).detach();
+        previewDeconvolution();
+    });
+
+    connect(ui->applyPushButton, &QPushButton::clicked, this, [this]() {
+        applyDeconvolution();
     });
 
     ui->iterationsSlider->setValue(defaultIterations);
@@ -73,6 +71,32 @@ DeconvolutionDialog::DeconvolutionDialog(cv::Mat &mat, QWidget *parent)
 
 DeconvolutionDialog::~DeconvolutionDialog() {
     delete ui;
+}
+
+void DeconvolutionDialog::previewDeconvolution() {
+    std::thread([this]() {
+        auto updateProgress = [this](int current, int total) {
+            QMetaObject::invokeMethod(this, [this, current, total] {
+                QString progress = QString("%1/%2").arg(current).arg(total);
+                ui->progressEdit->setText(progress);
+            });
+        };
+        cv::Mat result = Deconvolution::deconvolve(preview, Deconvolution::LucyRichardson, this->config, updateProgress);
+        imageDisplay->show(result);
+    }).detach();
+}
+
+void DeconvolutionDialog::applyDeconvolution() {
+    std::thread([this]() {
+        auto updateProgress = [this](int current, int total) {
+            QMetaObject::invokeMethod(this, [this, current, total] {
+                QString progress = QString("%1/%2").arg(current).arg(total);
+                ui->progressEdit->setText(progress);
+            });
+        };
+        cv::Mat result = Deconvolution::deconvolve(original, Deconvolution::LucyRichardson, this->config, updateProgress);
+        emit apply(result);
+    }).detach();
 }
 
 void DeconvolutionDialog::updatePSF() {

@@ -16,13 +16,21 @@ public:
     explicit DeconvolutionDialog(cv::Mat &mat, QWidget *parent = nullptr);
     ~DeconvolutionDialog();
 
+signals:
+    void apply(cv::Mat mat);
+
 private:
     Ui::DeconvolutionDialog *ui;
     std::unique_ptr<Display> imageDisplay;
     std::unique_ptr<Display> psfDisplay;
 
+    cv::Mat &original;
+    cv::Mat preview;
+
     Deconvolution::Config config;
-    cv::Mat &mat;
+
+    void previewDeconvolution();
+    void applyDeconvolution();
 
     void updatePSF();
 

@@ -17,7 +17,7 @@ public:
         cv::Mat psf;
     };
 
-    using IterationCallback = std::function<void(int)>;
+    using IterationCallback = std::function<void(int, int)>;
 
     static cv::Mat deconvolve(cv::Mat &mat, Method method, Config &config, IterationCallback = nullptr);
 

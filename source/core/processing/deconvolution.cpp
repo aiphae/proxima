@@ -56,43 +56,39 @@ cv::Mat Deconvolution::deconvolveLR(cv::Mat &mat, Config &config, IterationCallb
     cv::flip(psf, psfFlipped, -1);
 
     int channels = mat.channels();
-    std::vector<cv::Mat> outputChannels(channels);
-    cv::split(mat, outputChannels);
+    std::vector<cv::Mat> inputChannels(channels);
+    std::vector<cv::Mat> estimates(channels);
 
+    // Split input and convert to float
+    cv::split(mat, inputChannels);
     for (int c = 0; c < channels; ++c) {
-        cv::Mat blurred;
+        inputChannels[c].convertTo(inputChannels[c], CV_32F);
+        estimates[c] = inputChannels[c].clone();
+    }
 
-        if (channels == 1) {
-            mat.convertTo(blurred, CV_32F);
-        }
-        else {
-            outputChannels[c].convertTo(blurred, CV_32F);
-        }
-
-        cv::Mat estimate = blurred.clone();
-
-        for (int i = 0; i < config.iterations; ++i) {
+    for (int i = 0; i < config.iterations; ++i) {
+        for (int c = 0; c < channels; ++c) {
             cv::Mat estimateConv;
-            cv::filter2D(estimate, estimateConv, CV_32F, psf, {-1, -1}, 0, cv::BORDER_REPLICATE);
+            cv::filter2D(estimates[c], estimateConv, CV_32F, psf, {-1, -1}, 0, cv::BORDER_REPLICATE);
 
             cv::Mat ratio;
-            cv::divide(blurred, estimateConv + 1e-6f, ratio);
+            cv::divide(inputChannels[c], estimateConv + 1e-6f, ratio);
 
             cv::Mat correction;
             cv::filter2D(ratio, correction, CV_32F, psfFlipped, {-1, -1}, 0, cv::BORDER_REPLICATE);
 
-            estimate = estimate.mul(correction);
-            cv::threshold(estimate, estimate, 0, 0, cv::THRESH_TOZERO);
-
-            if (callback) {
-                callback(i + 1);
-            }
+            estimates[c] = estimates[c].mul(correction);
+            cv::threshold(estimates[c], estimates[c], 0, 0, cv::THRESH_TOZERO);
         }
-        outputChannels[c] = estimate;
+
+        if (callback) {
+            callback(i + 1, config.iterations);
+        }
     }
 
+    // Merge and normalize output
     cv::Mat result;
-    cv::merge(outputChannels, result);
+    cv::merge(estimates, result);
     cv::normalize(result, result, 0, 1, cv::NORM_MINMAX);
     result.convertTo(result, CV_8U, 255.0);
     return result;
