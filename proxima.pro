@@ -14,6 +14,7 @@ SOURCES += \
     source/core/stacking/alignment.cpp \
     source/core/stacking/stacker.cpp \
     source/ui/dialogs/deconvolutiondialog/deconvolutiondialog.cpp \
+    source/ui/dialogs/deconvolutiondialog/imageviewer.cpp \
     source/ui/dialogs/rgbaligndialog/rgbaligndialog.cpp \
     source/ui/widgets/homepage/homepage.cpp \
     source/ui/widgets/mainwindow/mainwindow.cpp \
@@ -37,6 +38,7 @@ HEADERS += \
     source/threading/thread.h \
     source/threading/threadpool.h \
     source/ui/dialogs/deconvolutiondialog/deconvolutiondialog.h \
+    source/ui/dialogs/deconvolutiondialog/imageviewer.h \
     source/ui/dialogs/rgbaligndialog/rgbaligndialog.h \
     source/ui/widgets/homepage/homepage.h \
     source/ui/widgets/mainwindow/mainwindow.h \

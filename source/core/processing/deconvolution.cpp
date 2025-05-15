@@ -59,7 +59,6 @@ cv::Mat Deconvolution::deconvolveLR(cv::Mat &mat, Config &config, IterationCallb
     std::vector<cv::Mat> inputChannels(channels);
     std::vector<cv::Mat> estimates(channels);
 
-    // Split input and convert to float
     cv::split(mat, inputChannels);
     for (int c = 0; c < channels; ++c) {
         inputChannels[c].convertTo(inputChannels[c], CV_32F);
@@ -86,10 +85,13 @@ cv::Mat Deconvolution::deconvolveLR(cv::Mat &mat, Config &config, IterationCallb
         }
     }
 
-    // Merge and normalize output
     cv::Mat result;
     cv::merge(estimates, result);
-    cv::normalize(result, result, 0, 1, cv::NORM_MINMAX);
+
+    double minVal, maxVal;
+    cv::minMaxLoc(mat, &minVal, &maxVal);
+    cv::normalize(result, result, minVal / 255.0, maxVal / 255.0, cv::NORM_MINMAX);
+
     result.convertTo(result, CV_8U, 255.0);
     return result;
 }

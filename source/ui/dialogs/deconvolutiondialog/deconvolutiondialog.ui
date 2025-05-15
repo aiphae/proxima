@@ -412,7 +412,7 @@
        <number>0</number>
       </property>
       <item>
-       <widget class="QLabel" name="previewDisplay">
+       <widget class="ImageViewer" name="previewDisplay">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
           <horstretch>0</horstretch>
@@ -441,6 +441,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>ImageViewer</class>
+   <extends>QLabel</extends>
+   <header>imageviewer.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

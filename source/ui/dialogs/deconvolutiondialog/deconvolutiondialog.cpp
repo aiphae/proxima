@@ -12,10 +12,8 @@ DeconvolutionDialog::DeconvolutionDialog(cv::Mat &mat, QWidget *parent)
     int previewSize = std::min(std::min(original.cols, original.rows), 200);
     preview = Frame::centerObject(original, previewSize, previewSize);
 
-    imageDisplay = std::make_unique<Display>(ui->previewDisplay);
+    ui->previewDisplay->loadOriginal(mat);
     psfDisplay = std::make_unique<Display>(ui->psfDisplay);
-
-    imageDisplay->show(preview);
 
     connect(ui->iterationsSpinBox, &QSpinBox::valueChanged, this, [this](int value) {
         ui->iterationsSlider->blockSignals(true);
@@ -81,8 +79,9 @@ void DeconvolutionDialog::previewDeconvolution() {
                 ui->progressEdit->setText(progress);
             });
         };
-        cv::Mat result = Deconvolution::deconvolve(preview, Deconvolution::LucyRichardson, this->config, updateProgress);
-        imageDisplay->show(result);
+        cv::Mat current = ui->previewDisplay->current();
+        cv::Mat result = Deconvolution::deconvolve(current, Deconvolution::LucyRichardson, this->config, updateProgress);
+        ui->previewDisplay->show(result);
     }).detach();
 }
 

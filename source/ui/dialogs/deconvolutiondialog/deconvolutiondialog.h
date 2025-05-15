@@ -21,7 +21,6 @@ signals:
 
 private:
     Ui::DeconvolutionDialog *ui;
-    std::unique_ptr<Display> imageDisplay;
     std::unique_ptr<Display> psfDisplay;
 
     cv::Mat &original;
