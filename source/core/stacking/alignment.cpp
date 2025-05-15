@@ -19,7 +19,7 @@ AlignmentPointSet AlignmentPointSet::estimate(cv::Mat frame, Config config) {
         // Detect strong corners
         processed.convertTo(processed, CV_32FC1);
         cv::blur(processed, processed, {3, 3});
-        cv::goodFeaturesToTrack(processed, cvAps, 150, 0.5, config.size / 2);
+        cv::goodFeaturesToTrack(processed, cvAps, 150, 0.25, config.size / 2);
     }
     else {
         cv::threshold(processed, processed, 0, 255, cv::THRESH_BINARY | cv::THRESH_OTSU);

@@ -4,7 +4,7 @@
 #include <QObject>
 #include <opencv2/opencv.hpp>
 #include "stacking/alignment.h"
-#include "data/mediamanager.h"
+#include "data/media_manager.h"
 
 struct StackConfig {
     // Sorted frames as index-quality pair

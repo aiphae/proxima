@@ -5,56 +5,56 @@ CONFIG += c++20
 SOURCES += \
     source/core/components/display.cpp \
     source/core/components/frame.cpp \
-    source/core/data/mediafile.cpp \
-    source/core/data/mediamanager.cpp \
-    source/core/processing/imageprocessor.cpp \
-    source/core/processing/colorcorrection.cpp \
+    source/core/data/media_file.cpp \
+    source/core/data/media_manager.cpp \
+    source/core/processing/color_correction.cpp \
     source/core/processing/deconvolution.cpp \
+    source/core/processing/image_processor.cpp \
     source/core/processing/wavelets.cpp \
     source/core/stacking/alignment.cpp \
     source/core/stacking/stacker.cpp \
-    source/ui/dialogs/deconvolutiondialog/deconvolutiondialog.cpp \
-    source/ui/dialogs/deconvolutiondialog/imageviewer.cpp \
-    source/ui/dialogs/rgbaligndialog/rgbaligndialog.cpp \
-    source/ui/widgets/homepage/homepage.cpp \
-    source/ui/widgets/mainwindow/mainwindow.cpp \
-    source/ui/widgets/processpage/processpage.cpp \
-    source/ui/widgets/stackpage/stackpage.cpp \
-    source/ui/widgets/stackpage/threads/sortingthread.cpp \
-    source/ui/widgets/stackpage/threads/stackingthread.cpp \
-    source/main.cpp
+    source/ui/dialogs/deconvolution_dialog/deconvolution_dialog.cpp \
+    source/ui/dialogs/deconvolution_dialog/image_viewer.cpp \
+    source/ui/dialogs/rgb_align_dialog/rgb_align_dialog.cpp \
+    source/ui/widgets/home_page/home_page.cpp \
+    source/ui/widgets/main_window/main_window.cpp \
+    source/ui/widgets/process_page/process_page.cpp \
+    source/main.cpp \
+    source/ui/widgets/stack_page/stack_page.cpp \
+    source/ui/widgets/stack_page/threads/sort_thread.cpp \
+    source/ui/widgets/stack_page/threads/stack_thread.cpp
 
 HEADERS += \
     source/core/components/display.h \
     source/core/components/frame.h \
-    source/core/data/mediafile.h \
-    source/core/data/mediamanager.h \
-    source/core/processing/imageprocessor.h \
-    source/core/processing/colorcorrection.h \
+    source/core/data/media_file.h \
+    source/core/data/media_manager.h \
+    source/core/processing/color_correction.h \
     source/core/processing/deconvolution.h \
+    source/core/processing/image_processor.h \
     source/core/processing/wavelets.h \
     source/core/stacking/alignment.h \
     source/core/stacking/stacker.h \
     source/threading/thread.h \
-    source/threading/threadpool.h \
-    source/ui/dialogs/deconvolutiondialog/deconvolutiondialog.h \
-    source/ui/dialogs/deconvolutiondialog/imageviewer.h \
-    source/ui/dialogs/rgbaligndialog/rgbaligndialog.h \
-    source/ui/widgets/homepage/homepage.h \
-    source/ui/widgets/mainwindow/mainwindow.h \
-    source/ui/widgets/processpage/processpage.h \
-    source/ui/widgets/stackpage/stackpage.h \
-    source/ui/widgets/stackpage/threads/sortingthread.h \
-    source/ui/widgets/stackpage/threads/stackingthread.h
+    source/threading/thread_pool.h \
+    source/ui/dialogs/deconvolution_dialog/deconvolution_dialog.h \
+    source/ui/dialogs/deconvolution_dialog/image_viewer.h \
+    source/ui/dialogs/rgb_align_dialog/rgb_align_dialog.h \
+    source/ui/widgets/home_page/home_page.h \
+    source/ui/widgets/main_window/main_window.h \
+    source/ui/widgets/process_page/process_page.h \
+    source/ui/widgets/stack_page/stack_page.h \
+    source/ui/widgets/stack_page/threads/sort_thread.h \
+    source/ui/widgets/stack_page/threads/stack_thread.h
 
 FORMS += \
-    source/ui/dialogs/deconvolutiondialog/deconvolutiondialog.ui \
-    source/ui/dialogs/rgbaligndialog/rgbaligndialog.ui \
-    source/ui/widgets/homepage/homepage.ui \
-    source/ui/widgets/mainwindow/mainwindow.ui \
-    source/ui/widgets/processpage/processpage.ui \
-    source/ui/widgets/stackpage/stackpage.ui \
-    source/form.ui
+    source/ui/dialogs/deconvolution_dialog/deconvolution_dialog.ui \
+    source/ui/dialogs/rgb_align_dialog/rgb_align_dialog.ui \
+    source/ui/widgets/home_page/home_page.ui \
+    source/ui/widgets/main_window/main_window.ui \
+    source/ui/widgets/process_page/process_page.ui \
+    source/form.ui \
+    source/ui/widgets/stack_page/stack_page.ui
 
 INCLUDEPATH += \
     source \

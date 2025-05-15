@@ -1,4 +1,5 @@
 #include "deconvolution.h"
+#include <QDebug>
 
 cv::Mat computePSF(double sigma, double kurtosis) {
     // Ensure sigma is positive and not too small
