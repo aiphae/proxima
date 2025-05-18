@@ -18,15 +18,16 @@ const QSet<QString> videoExtensions = {
 // and provides ability to extract specific frames from it
 class MediaFile {
 public:
-    MediaFile(const QString &filename);
+    MediaFile(const QString& filename);
     ~MediaFile();
 
     bool isValid() const { return _isValid; }
-    bool isVideo() const { return _isVideo; };
-    int frames() const { return _frames; };
+    bool isVideo() const { return _isVideo; }
+    int frames() const { return _frames; }
     cv::Size dimensions() const { return _dimensions; }
     std::string extension() const { return _extension; }
     std::string filename() const { return _filename; }
+
     cv::Mat matAtFrame(int frame);
 
     MediaFile(MediaFile&& other) noexcept;
@@ -36,6 +37,10 @@ public:
     MediaFile& operator=(const MediaFile&) = delete;
 
 private:
+    void loadBlock(const size_t blockIndex);
+
+    static constexpr int BLOCK_SIZE = 100;
+
     cv::Mat image;
     cv::VideoCapture video;
 
@@ -46,6 +51,8 @@ private:
     std::string _extension;
     std::string _filename;
 
+    std::vector<cv::Mat> currentBlock;
+    size_t currentBlockIndex = -1;
     std::mutex videoMutex;
 };
 

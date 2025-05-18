@@ -28,18 +28,38 @@ MediaFile::MediaFile(const QString &filename) {
 
 cv::Mat MediaFile::matAtFrame(int frame) {
     if (_isVideo) {
+        const size_t blockIndex = frame / BLOCK_SIZE;
         std::lock_guard<std::mutex> lock(videoMutex);
-        video.set(cv::CAP_PROP_POS_FRAMES, frame);
-        cv::Mat mat;
-        if (video.read(mat)) {
-            return mat;
+
+        if (blockIndex != currentBlockIndex) {
+            loadBlock(blockIndex);
         }
-        else {
-            return cv::Mat();
+
+        const size_t localIndex = frame % BLOCK_SIZE;
+        if (localIndex < currentBlock.size()) {
+            return currentBlock[localIndex];
         }
+        return cv::Mat();
     }
 
     return image;
+}
+
+void MediaFile::loadBlock(const size_t blockIndex) {
+    currentBlock.clear();
+
+    size_t startFrame = blockIndex * BLOCK_SIZE;
+    video.set(cv::CAP_PROP_POS_FRAMES, startFrame);
+
+    for (size_t i = 0; i < BLOCK_SIZE && startFrame + i < _frames; ++i) {
+        cv::Mat mat;
+        if (!video.read(mat))
+            break;
+
+        currentBlock.emplace_back(std::move(mat));
+    }
+
+    currentBlockIndex = blockIndex;
 }
 
 MediaFile::~MediaFile() {
