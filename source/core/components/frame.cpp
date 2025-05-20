@@ -15,7 +15,9 @@ cv::Mat Frame::centerObject(cv::Mat frame, int width, int height) {
     const double scale = 0.25;
     cv::resize(processed, processed, {}, scale, scale, cv::INTER_AREA);
 
+    // Preprocess for contour detection
     cv::blur(processed, processed, cv::Size(3, 3));
+    processed.convertTo(processed, CV_8U);
     cv::threshold(processed, processed, 0, 255, cv::THRESH_BINARY | cv::THRESH_OTSU);
 
     std::vector<std::vector<cv::Point>> contours;
@@ -86,6 +88,10 @@ double Frame::estimateQuality(cv::Mat frame) {
     else {
         gray = frame;
     }
+
+    // Downscale to reduce computation
+    const double scale = 0.5;
+    cv::resize(gray, gray, cv::Size(), scale, scale, cv::INTER_AREA);
 
     // Apply blur to reduce noise
     cv::GaussianBlur(gray, gray, cv::Size(3, 3), 0.5);
