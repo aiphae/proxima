@@ -3,6 +3,9 @@
 
 #include <opencv2/opencv.hpp>
 
+// Computes shift between 'reference' and 'target' with subpixel precision
+cv::Point2f computeShift(cv::Mat reference, cv::Mat target);
+
 // Single alignment poit
 class AlignmentPoint {
 public:
