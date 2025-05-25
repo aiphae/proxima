@@ -1,251 +1,160 @@
 #include "stacker.h"
 #include "components/frame.h"
 
-cv::Mat Stacker::stack(MediaManager &manager, StackConfig &config) {
-    return config.localAlign ? stackLocal(manager, config, true) : stackGlobal(manager, config, true, true);
-}
-
 //
-// Performs global stacking.
+// Performs stacking on a series of frames managed by a MediaManager,
+// with support for global and local alignment using a weighted averaging approach.
 //
-// Each frame is warped globally via phase correlation.
-//
-// 'bool emitSignals' - whether to send the GUI-updating signal to the main thread.
-// 'bool crop' - whether to crop the resulting image according to the config values.
-//
-cv::Mat Stacker::stackGlobal(MediaManager &manager, StackConfig &config, bool emitSignals, bool crop) {
+cv::Mat Stacker::stack(MediaManager &manager, StackConfig &config, IterationCallback callback) {
     cv::Mat reference = manager.matAtFrame(config.sorted[0].first);
     if (reference.empty()) {
         return {};
     }
+    // This is applied because APs have been estimated on the centered reference frame
+    reference = Frame::centerObject(reference, reference.cols, reference.rows);
 
-    cv::Size drizzleSize {
-        static_cast<int>(reference.cols * config.drizzle),
-        static_cast<int>(reference.rows * config.drizzle)
-    };
+    double upsample = config.drizzle;
+    cv::Size upsampledSize(
+        reference.cols * upsample,
+        reference.rows * upsample
+    );
 
-    cv::Mat accumulator = cv::Mat::zeros(drizzleSize, CV_32FC3);
-    double weights = 0.0;
+    // Accumulators for both local and global stacks
+    cv::Mat localAccumulator = cv::Mat::zeros(upsampledSize, CV_32FC3);
+    cv::Mat localWeights = cv::Mat::zeros(upsampledSize, CV_32F);
+    cv::Mat globalAccumulator = localAccumulator.clone();
+    cv::Mat globalWeights = localWeights.clone();
 
-    cv::Mat referenceGray;
-    cv::cvtColor(reference, referenceGray, cv::COLOR_BGR2GRAY);
-    referenceGray.convertTo(referenceGray, CV_32F);
+    int framesToStack = static_cast<int>(config.sorted.size());
 
-    int framesToStack = config.sorted.size();
+    std::stable_sort(config.sorted.begin(), config.sorted.end(), [](const auto &a, const auto &b) {
+        return a.first < b.first;
+    });
+
+    std::vector<int> preparedData;
+    for (const auto& p : config.sorted) {
+        preparedData.push_back(p.first);
+    }
+
+    std::vector<cv::Mat> frames = manager.matsAtFrames(preparedData);
+
     for (int i = 0; i < framesToStack; ++i) {
-        cv::Mat current = manager.matAtFrame(config.sorted[i].first);
+        cv::Mat current = frames[i];
         if (current.empty()) {
             continue;
         }
 
-        // Higher-quality frames have more impact
         double frameWeight = config.sorted[i].second;
 
-        cv::Mat currentGray;
-        cv::cvtColor(current, currentGray, cv::COLOR_BGR2GRAY);
-        currentGray.convertTo(currentGray, CV_32F);
-
-        // Compute the shift between the current image and the reference one
-        cv::Point2f shift = cv::phaseCorrelate(referenceGray, currentGray);
-        cv::Mat M = (cv::Mat_<double>(2, 3) <<
-            1, 0, -shift.x * config.drizzle,
-            0, 1, -shift.y * config.drizzle
-        );
-
-        // Enlarge to allow drizzle
-        cv::Mat enlarged;
-        cv::resize(current, enlarged, drizzleSize, 0, 0, cv::INTER_NEAREST);
-
-        // Warp the current image
-        cv::Mat aligned;
-        cv::warpAffine(enlarged, aligned, M, drizzleSize, cv::INTER_CUBIC);
-        aligned.convertTo(aligned, CV_32FC3);
-
-        // Accumulate the results
-        accumulator += aligned * frameWeight;
-        weights += frameWeight;
-
-        // Emit the signal to the main thread
-        if (emitSignals) {
-            QString status = QString("%1/%2").arg(i + 1).arg(framesToStack);
-            emit progressUpdated(status);
-        }
-    }
-
-    if (weights == 0.0) {
-        return {};
-    }
-
-    cv::Mat result;
-    accumulator /= weights;
-    accumulator.convertTo(result, CV_8UC3);
-
-    if (crop) {
-        result = Frame::centerObject(result, config.outputWidth * config.drizzle, config.outputHeight * config.drizzle);
-    }
-
-    return result;
-}
-
-//
-// Performs local stacking.
-//
-// For each frame, each AP from 'source.aps' is shifted
-// individually and accumulated into the according position.
-//
-// 'bool emitSignals' - whether to send the GUI-updating signal to the main thread.
-//
-cv::Mat Stacker::stackLocal(MediaManager &manager, StackConfig &config, bool emitSignals) {
-    cv::Mat reference = manager.matAtFrame(config.sorted[0].first);
-    if (reference.empty()) {
-        return {};
-    }
-
-    cv::Size drizzleSize {
-        static_cast<int>(reference.cols * config.drizzle),
-        static_cast<int>(reference.rows * config.drizzle)
-    };
-
-    cv::Mat accumulator = cv::Mat::zeros(drizzleSize, CV_32FC3);
-    cv::Mat weights = cv::Mat::zeros(drizzleSize, CV_32F);
-
-    cv::Mat referenceGray;
-    cv::cvtColor(reference, referenceGray, cv::COLOR_BGR2GRAY);
-    referenceGray.convertTo(referenceGray, CV_32F);
-
-    int framesToStack = config.sorted.size();
-    for (int i = 0; i < framesToStack; ++i) {
-        cv::Mat current = manager.matAtFrame(config.sorted[i].first);
-        if (current.empty()) {
-            continue;
-        }
-
-        cv::Mat currentGray;
-        cv::cvtColor(current, currentGray, cv::COLOR_BGR2GRAY);
-        currentGray.convertTo(currentGray, CV_32F);
-
-        // Compute global shift between images
-        cv::Point2f globalShift = cv::phaseCorrelate(referenceGray, currentGray);
-
-        // Warp current color frame to drizzle size
-        cv::Mat enlarged;
-        if (config.drizzle > 1) {
-            cv::resize(current, enlarged, drizzleSize, 0, 0, cv::INTER_NEAREST);
-        }
-        else {
-            enlarged = current;
-        }
-
+        // Compute global shift relative to reference
+        cv::Point2f globalShift = computeShift(reference, current, 0.35);
         cv::Mat globalM = (cv::Mat_<double>(2, 3) <<
-            1, 0, -globalShift.x * config.drizzle,
-            0, 1, -globalShift.y * config.drizzle
-        );
-
-        cv::Mat globalAligned;
-        cv::warpAffine(enlarged, globalAligned, globalM, drizzleSize, cv::INTER_LANCZOS4, cv::BORDER_REFLECT);
-
-        // Align currentGray (non-drizzled) for local shift computation
-        cv::Mat currentGrayAligned;
-        cv::Mat globalMUndrizzled = (cv::Mat_<double>(2, 3) <<
             1, 0, -globalShift.x,
             0, 1, -globalShift.y
         );
-        cv::warpAffine(currentGray, currentGrayAligned, globalMUndrizzled, currentGray.size(), cv::INTER_LANCZOS4, cv::BORDER_REFLECT);
 
-        float frameWeight = config.sorted[i].second;
-        constexpr int padding = 5;
+        // Apply global alignment
+        cv::Mat globalAligned;
+        cv::warpAffine(current, globalAligned, globalM, reference.size(), cv::INTER_LANCZOS4);
+        globalAligned.convertTo(globalAligned, CV_32FC3);
 
-        for (const auto &ap : config.aps) {
-            // ROI in non-drizzled domain
-            cv::Rect originalRoi = ap.rect();
-            cv::Rect validOriginalRoi = originalRoi & cv::Rect(0, 0, referenceGray.cols, referenceGray.rows);
-            if (validOriginalRoi.width <= 1 || validOriginalRoi.height <= 1) {
-                continue;
+        // Upsample the globally aligned frame
+        cv::Mat globalAlignedUpsampled;
+        cv::resize(globalAligned, globalAlignedUpsampled, upsampledSize, cv::INTER_LANCZOS4);
+
+        globalAccumulator += globalAlignedUpsampled * frameWeight;
+        globalWeights += frameWeight;
+
+        // Optional: Local alignment using alignment points (APs)
+        if (config.localAlign) {
+            // Padding to exclude borders interpolation (e.g. BORDER_REPLICATE)
+            constexpr int padding = 5;
+
+            for (const auto &ap : config.aps) {
+                // Original AP's ROI
+                cv::Rect roi = ap.rect(), paddedRoi = roi;
+                roi &= cv::Rect(0, 0, reference.cols, reference.rows);
+
+                // Padded ROI
+                paddedRoi = {
+                    paddedRoi.x - padding,
+                    paddedRoi.y - padding,
+                    paddedRoi.width + 2 * padding,
+                    paddedRoi.height + 2 * padding
+                };
+                paddedRoi &= cv::Rect(0, 0, reference.cols, reference.rows);
+
+                // padX(Y)[0] is applied padding to the left (top), [1] is to the right (bottom)
+                int padX[2] {roi.x - paddedRoi.x, paddedRoi.x + paddedRoi.width - roi.x - roi.width};
+                int padY[2] {roi.y - paddedRoi.y, paddedRoi.y + paddedRoi.height - roi.y - roi.height};
+
+                // Local shift between the ROI in reference and globally aligned frame
+                cv::Point2f localShift = computeShift(reference(roi), globalAligned(roi));
+                cv::Mat localM = (cv::Mat_<double>(2, 3) <<
+                    1, 0, -localShift.x * upsample,
+                    0, 1, -localShift.y * upsample
+                );
+
+                // Extract and upsample padded patch
+                cv::Mat paddedPatch = globalAligned(paddedRoi).clone();
+                cv::resize(paddedPatch, paddedPatch,
+                    {static_cast<int>(paddedRoi.width * upsample), static_cast<int>(paddedRoi.height * upsample)},
+                    cv::INTER_LANCZOS4
+                );
+                // Apply the local shift
+                cv::warpAffine(paddedPatch, paddedPatch, localM, paddedPatch.size(), cv::INTER_LANCZOS4, cv::BORDER_REPLICATE);
+
+                // Extract the aligned inner patch
+                cv::Rect roiInPadded(
+                    padX[0] * upsample,
+                    padY[0] * upsample,
+                    (paddedRoi.width - padX[0] - padX[1]) * upsample,
+                    (paddedRoi.height - padY[0] - padY[1]) * upsample
+                );
+
+                cv::Mat patchInPadded = paddedPatch(roiInPadded).clone();
+
+                // Scale the original ROI to match upsampled space
+                roi.x *= upsample;
+                roi.y *= upsample;
+                roi.width *= upsample;
+                roi.height *= upsample;
+
+                localAccumulator(roi) += patchInPadded * frameWeight;
+                localWeights(roi) += frameWeight;
             }
+        }
 
-            // Compute local shift between reference and globally aligned gray image
-            cv::Point2f localShift = Frame::computeShift(
-                referenceGray(validOriginalRoi),
-                currentGrayAligned(validOriginalRoi)
-            );
-            localShift.x *= config.drizzle;
-            localShift.y *= config.drizzle;
+        // Optional: execute the callback function
+        if (callback) {
+            callback(i + 1, framesToStack);
+        }
+    }
 
-            // ROI in drizzle scale
-            cv::Rect roi = ap.rect();
-            roi.x *= config.drizzle;
-            roi.y *= config.drizzle;
-            roi.width *= config.drizzle;
-            roi.height *= config.drizzle;
-
-            cv::Rect safeRoi = roi & cv::Rect(0, 0, accumulator.cols, accumulator.rows);
-            if (safeRoi.width <= 0 || safeRoi.height <= 0) {
-                continue;
-            }
-
-            // Expand ROI to allow interpolation at edges
-            cv::Rect paddedRoi(
-                std::max(safeRoi.x - padding, 0),
-                std::max(safeRoi.y - padding, 0),
-                std::min(safeRoi.width + 2 * padding, accumulator.cols - (safeRoi.x - padding)),
-                std::min(safeRoi.height + 2 * padding, accumulator.rows - (safeRoi.y - padding))
-            );
-
-            // Apply local shift to the globally aligned image
-            cv::Mat warpedPatch;
-            cv::Mat localM = (cv::Mat_<double>(2, 3) <<
-                1, 0, -localShift.x,
-                0, 1, -localShift.y
-            );
-            cv::warpAffine(globalAligned(paddedRoi), warpedPatch, localM, paddedRoi.size(), cv::INTER_CUBIC, cv::BORDER_REFLECT);
-            warpedPatch.convertTo(warpedPatch, CV_32FC3);
-
-            // Crop back to original ROI
-            cv::Rect roiInPadded(
-                safeRoi.x - paddedRoi.x,
-                safeRoi.y - paddedRoi.y,
-                safeRoi.width,
-                safeRoi.height
-            );
-            cv::Mat cropped = warpedPatch(roiInPadded);
-
-            for (int y = 0; y < safeRoi.height; ++y) {
-                for (int x = 0; x < safeRoi.width; ++x) {
-                    cv::Vec3f val = cropped.at<cv::Vec3f>(y, x);
-                    if (val[0] > 0.0f && val[1] > 0.0f && val[2] > 0.0f) {
-                        int ax = safeRoi.x + x;
-                        int ay = safeRoi.y + y;
-                        weights.at<float>(ay, ax) += frameWeight;
-                        accumulator.at<cv::Vec3f>(ay, ax) += val * frameWeight;
-                    }
+    // Final result mat
+    cv::Mat result(globalAccumulator.size(), CV_32FC3);
+    // Combine local and global accumulations
+    if (config.localAlign) {
+        for (int y = 0; y < result.rows; ++y) {
+            for (int x = 0; x < result.cols; ++x) {
+                float localW = localWeights.at<float>(y, x);
+                if (localW > 0.0f) {
+                    result.at<cv::Vec3f>(y, x) = localAccumulator.at<cv::Vec3f>(y, x) / localW;
+                }
+                else {
+                    float globalW = globalWeights.at<float>(y, x);
+                    result.at<cv::Vec3f>(y, x) = globalAccumulator.at<cv::Vec3f>(y, x) / globalW;
                 }
             }
         }
-
-        if (emitSignals) {
-            QString status = QString("%1/%2").arg(i + 1).arg(framesToStack);
-            emit progressUpdated(status);
-        }
+    }
+    // Normalize global accumulation only
+    else {
+        cv::Mat weights3;
+        cv::Mat weightsChannels[] {globalWeights, globalWeights, globalWeights};
+        cv::merge(weightsChannels, 3, weights3);
+        cv::divide(globalAccumulator, weights3, result);
     }
 
-    // Fallback to global stack for unpopulated areas
-    cv::Mat stackedGlobal = stackGlobal(manager, config, false, false);
-    stackedGlobal.convertTo(stackedGlobal, CV_32FC3);
-
-    cv::Mat result = cv::Mat::zeros(accumulator.size(), CV_32FC3);
-    for (int y = 0; y < result.rows; ++y) {
-        for (int x = 0; x < result.cols; ++x) {
-            float w = weights.at<float>(y, x);
-            if (w > 0.0f) {
-                result.at<cv::Vec3f>(y, x) = accumulator.at<cv::Vec3f>(y, x) / w;
-            }
-            else {
-                result.at<cv::Vec3f>(y, x) = stackedGlobal.at<cv::Vec3f>(y, x);
-            }
-        }
-    }
-
-    result.convertTo(result, CV_8UC3);
-    result = Frame::centerObject(result, config.outputWidth * config.drizzle, config.outputHeight * config.drizzle);
     return result;
 }

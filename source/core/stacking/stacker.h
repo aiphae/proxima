@@ -20,19 +20,9 @@ struct StackConfig {
 };
 
 class Stacker : public QObject {
-    Q_OBJECT
-
 public:
-    explicit Stacker(QObject *parent = nullptr) : QObject(parent) {}
-    cv::Mat stack(MediaManager &manager, StackConfig &config);
-
-signals:
-    // Signal to the main thread to update the GUI
-    void progressUpdated(QString status);
-
-private:
-    cv::Mat stackGlobal(MediaManager &manager, StackConfig &config, bool emitSignals, bool crop);
-    cv::Mat stackLocal(MediaManager &manager, StackConfig &config, bool emitSignals);
+    using IterationCallback = std::function<void(int, int)>;
+    static cv::Mat stack(MediaManager &manager, StackConfig &config, IterationCallback callback = nullptr);
 };
 
 #endif // STACKER_H
