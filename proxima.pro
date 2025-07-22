@@ -22,7 +22,8 @@ SOURCES += \
     source/main.cpp \
     source/ui/widgets/stack_page/stack_page.cpp \
     source/ui/widgets/stack_page/threads/sort_thread.cpp \
-    source/ui/widgets/stack_page/threads/stack_thread.cpp
+    source/ui/widgets/stack_page/threads/stack_thread.cpp \
+    source/ui/workspace.cpp
 
 HEADERS += \
     source/core/components/display.h \
@@ -45,7 +46,8 @@ HEADERS += \
     source/ui/widgets/process_page/process_page.h \
     source/ui/widgets/stack_page/stack_page.h \
     source/ui/widgets/stack_page/threads/sort_thread.h \
-    source/ui/widgets/stack_page/threads/stack_thread.h
+    source/ui/widgets/stack_page/threads/stack_thread.h \
+    source/ui/workspace.h
 
 FORMS += \
     source/ui/dialogs/deconvolution_dialog/deconvolution_dialog.ui \
