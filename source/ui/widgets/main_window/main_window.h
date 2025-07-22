@@ -2,18 +2,11 @@
 #define MAIN_WINDOW_H
 
 #include <QMainWindow>
+#include "data/media_file.h"
 
-QT_BEGIN_NAMESPACE
 namespace Ui {
 class MainWindow;
 }
-QT_END_NAMESPACE
-
-enum class Pages {
-    Home = 0,
-    Stack = 1,
-    Process = 2
-};
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -22,14 +15,13 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
-public slots:
-    void updateCurrentPage(int pageIndex);
-
 private:
     Ui::MainWindow *ui;
+    void connectUI();
+    void setupUI();
 
-    void initializePages();
-    void connectButtons();
+    MediaFile *currentFile;
+    void showFile();
 };
 
 #endif // MAIN_WINDOW_H
