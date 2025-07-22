@@ -4,14 +4,14 @@
 #include <QLabel>
 #include <opencv2/opencv.hpp>
 
-// Class for displaying images in a QLabel
-class Display {
+class Display : public QLabel {
 public:
-    Display(QLabel *label) : label(label) {}
-    void show(const cv::Mat &mat);
+    Display(QWidget *parent = nullptr) : QLabel(parent) {}
+    void show(const cv::Mat &mat, Qt::AspectRatioMode mode = Qt::KeepAspectRatio);
+    void resizeEvent(QResizeEvent *event) override;
 
 private:
-    QLabel *label;
+    QImage originalImage;
 };
 
 #endif // DISPLAY_H
