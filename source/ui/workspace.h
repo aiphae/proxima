@@ -4,6 +4,7 @@
 #include <QWidget>
 #include <QLabel>
 #include <QVBoxLayout>
+#include <QCheckBox>
 #include "data/media_file.h"
 #include "components/display.h"
 
@@ -14,11 +15,14 @@ class Workspace : public QWidget {
 public:
     explicit Workspace(QWidget *parent = nullptr);
     bool addItem(const std::string &path);
-    unsigned int count() { return static_cast<unsigned int>(workspaceItems.size()); }
+    int itemCount() { return static_cast<unsigned int>(workspaceItems.size()); }
     void clear();
+    void enableMultipleSelection(bool flag);
+    void resetMultipleSelection();
 
 signals:
     void itemClicked(MediaFile *);
+    void itemChecked(MediaFile *, bool flag);
 
 private:
     class WorkspaceItem;
@@ -35,19 +39,23 @@ class Workspace::WorkspaceItem : public QFrame {
 
 public:
     explicit WorkspaceItem(MediaFile *file, QWidget *parent = nullptr);
+    void showCheckBox(bool flag) { checkBox->setHidden(!flag); }
+    void resetCheckBox() { checkBox->setCheckState(Qt::Unchecked); }
 
 signals:
-    void clicked(std::string filePath);
+    void clicked(const std::string &filePath);
+    void checked(const std::string &filePath, bool flag);
 
 protected:
     void mousePressEvent(QMouseEvent *event) override;
 
 private:
-    std::string filePath;
+    const std::string filePath;
     Display *display;
     QLabel *fileNameLabel;
     QLabel *framesLabel;
     QLabel *fileSizeLabel;
+    QCheckBox *checkBox;
 };
 
 #endif // WORKSPACE_H

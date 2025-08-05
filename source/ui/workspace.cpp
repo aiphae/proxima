@@ -1,5 +1,6 @@
 #include "workspace.h"
 #include <QHBoxLayout>
+#include <QGridLayout>
 #include <QScrollArea>
 #include <QFileInfo>
 
@@ -31,21 +32,22 @@ bool Workspace::addItem(const std::string &path) {
         return false;
     }
 
-    // Insert into map
     auto [it, inserted] = mediaFiles.emplace(path, std::move(file));
     if (!inserted) {
         return false;
     }
 
-    // Create item and UI
     auto *item = new WorkspaceItem(&it->second, this);
     workspaceItems.emplace_back(item);
 
     containerLayout->addWidget(item);
     containerWidget->update();
 
-    connect(item, &WorkspaceItem::clicked, this, [this](std::string filePath) {
+    connect(item, &WorkspaceItem::clicked, this, [this](const std::string &filePath) {
         emit itemClicked(&mediaFiles.at(filePath));
+    });
+    connect(item, &WorkspaceItem::checked, this, [this](const std::string &filePath, bool flag) {
+        emit itemChecked(&mediaFiles.at(filePath), flag);
     });
 
     return true;
@@ -59,6 +61,18 @@ void Workspace::clear() {
     workspaceItems.clear();
     mediaFiles.clear();
     containerWidget->update();
+}
+
+void Workspace::enableMultipleSelection(bool flag) {
+    for (auto item : workspaceItems) {
+        item->showCheckBox(flag);
+    }
+}
+
+void Workspace::resetMultipleSelection() {
+    for (auto item : workspaceItems) {
+        item->resetCheckBox();
+    }
 }
 
 Workspace::WorkspaceItem::WorkspaceItem(MediaFile *file, QWidget *parent)
@@ -105,13 +119,31 @@ Workspace::WorkspaceItem::WorkspaceItem(MediaFile *file, QWidget *parent)
     metadataLayout->addWidget(fileSizeLabel);
     metadataLayout->addWidget(framesLabel);
 
+    checkBox = new QCheckBox(this);
+    checkBox->setHidden(true); // Hide check box by default
+    checkBox->setMinimumWidth(18);
+    checkBox->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
+    connect(checkBox, &QCheckBox::checkStateChanged, this, [this](Qt::CheckState state) {
+        emit checked(filePath, state == Qt::Checked);
+    });
+
     auto layout = new QVBoxLayout;
+    layout->addWidget(checkBox);
     layout->addWidget(display);
     layout->addWidget(fileNameLabel);
     layout->addLayout(metadataLayout);
     layout->setContentsMargins(6, 6, 6, 6);
 
-    setLayout(layout);
+    auto layout_ = new QGridLayout;
+
+    layout_->addWidget(checkBox, 0, 0, Qt::AlignTop);
+    layout_->addWidget(display, 0, 1, 1, 2);
+    layout_->addWidget(fileNameLabel, 1, 1, 1, 2);
+    layout_->addWidget(fileSizeLabel, 2, 1);
+    layout_->addWidget(framesLabel, 2, 2);
+    layout_->setContentsMargins(6, 6, 6, 6);
+
+    setLayout(layout_);
     setFrameShape(QFrame::StyledPanel);
 }
 
