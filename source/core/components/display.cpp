@@ -32,5 +32,5 @@ void Display::resizeEvent(QResizeEvent *event) {
     if (!pixmap() || pixmap().isNull()) {
         return;
     }
-    setPixmap(pixmap().scaled(size(), Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation));
+    setPixmap(QPixmap::fromImage(originalImage).scaled(size(), Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation));
 }

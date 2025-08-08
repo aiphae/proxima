@@ -4,7 +4,7 @@
 #include <QObject>
 #include <opencv2/opencv.hpp>
 #include "stacking/alignment.h"
-#include "data/media_manager.h"
+#include "data/media_collection.h"
 
 struct StackConfig {
     // Sorted frames as index-quality pair
@@ -22,7 +22,7 @@ struct StackConfig {
 class Stacker : public QObject {
 public:
     using IterationCallback = std::function<void(int, int)>;
-    static cv::Mat stack(MediaManager &manager, StackConfig &config, IterationCallback callback = nullptr);
+    static cv::Mat stack(MediaCollection &manager, StackConfig &config, IterationCallback callback = nullptr);
 };
 
 #endif // STACKER_H

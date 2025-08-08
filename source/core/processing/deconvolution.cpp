@@ -69,13 +69,13 @@ cv::Mat Deconvolution::deconvolveLR(cv::Mat &mat, Config &config, IterationCallb
     for (int i = 0; i < config.iterations; ++i) {
         for (int c = 0; c < channels; ++c) {
             cv::Mat estimateConv;
-            cv::filter2D(estimates[c], estimateConv, CV_32F, psf, {-1, -1}, 0, cv::BORDER_REPLICATE);
+            cv::filter2D(estimates[c], estimateConv, CV_32F, psf, {-1, -1}, 0, cv::BORDER_REFLECT101);
 
             cv::Mat ratio;
-            cv::divide(inputChannels[c], estimateConv + 1e-6f, ratio);
+            cv::divide(inputChannels[c], estimateConv + 1e-4f, ratio);
 
             cv::Mat correction;
-            cv::filter2D(ratio, correction, CV_32F, psfFlipped, {-1, -1}, 0, cv::BORDER_REPLICATE);
+            cv::filter2D(ratio, correction, CV_32F, psfFlipped, {-1, -1}, 0, cv::BORDER_REFLECT101);
 
             estimates[c] = estimates[c].mul(correction);
             cv::threshold(estimates[c], estimates[c], 0, 0, cv::THRESH_TOZERO);
@@ -89,11 +89,6 @@ cv::Mat Deconvolution::deconvolveLR(cv::Mat &mat, Config &config, IterationCallb
     cv::Mat result;
     cv::merge(estimates, result);
 
-    double minVal, maxVal;
-    cv::minMaxLoc(mat, &minVal, &maxVal);
-    cv::normalize(result, result, minVal / 255.0, maxVal / 255.0, cv::NORM_MINMAX);
-
-    result.convertTo(result, CV_8U, 255.0);
     return result;
 }
 

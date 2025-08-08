@@ -305,7 +305,7 @@
        </widget>
       </item>
       <item row="0" column="0">
-       <widget class="QLabel" name="psfDisplay">
+       <widget class="Display" name="psfDisplay">
         <property name="minimumSize">
          <size>
           <width>125</width>
@@ -446,6 +446,11 @@
    <class>ImageViewer</class>
    <extends>QLabel</extends>
    <header>image_viewer.h</header>
+  </customwidget>
+  <customwidget>
+   <class>Display</class>
+   <extends>QLabel</extends>
+   <header>components/display.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

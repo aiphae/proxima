@@ -5,6 +5,7 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QDesktopServices>
+#include <QSettings>
 
 // A helper function to build a filter with supported media files for user input
 QString fileFilters();
@@ -16,11 +17,18 @@ StackPage::StackPage(QWidget *parent)
     , stackingThread(manager, config, percentages, outputDir)
 {
     ui->setupUi(this);
-    display = std::make_unique<Display>(ui->imageDisplay);
     connectUI();
+    loadSettings();
 }
 
 StackPage::~StackPage() {
+    QSettings settings;
+    settings.setValue("stack-page/stack-percent-1", ui->percentToStackSpinBox1->value());
+    settings.setValue("stack-page/stack-percent-2", ui->percentToStackSpinBox2->value());
+    settings.setValue("stack-page/stack-percent-3", ui->percentToStackSpinBox3->value());
+    settings.setValue("stack-page/stack-percent-4", ui->percentToStackSpinBox4->value());
+    settings.setValue("stack-page/stack-percent-5", ui->percentToStackSpinBox5->value());
+
     delete ui;
 }
 
@@ -31,11 +39,11 @@ void StackPage::selectFiles() {
     }
 
     // Clear previous data
-    manager.clear();
-    config.aps.clear();
+    // manager.clear();
+    // config.aps.clear();
 
-    // Load new files and check for validity
-    manager.load(files);
+    // // Load new files and check for validity
+    // manager.load(files);
     if (manager.totalFrames() == 0) {
         return;
     }
@@ -70,8 +78,7 @@ void StackPage::displayFrame(const int frameNumber) {
     if (frame.empty()) {
         return;
     }
-
-    frame = Frame::centerObject(frame, frame.cols, frame.rows);
+    frame = Frame::centerObject(frame, frame.rows, frame.cols);
 
     // Display alignment points if checked
     if (ui->showApsCheckBox->isChecked() && !config.aps.empty()) {
@@ -84,12 +91,11 @@ void StackPage::displayFrame(const int frameNumber) {
 
     frame = Frame::expandBorders(frame, config.outputWidth, config.outputHeight);
 
-    display->show(frame);
+    ui->imageDisplay->show(frame);
 }
 
 void StackPage::estimateAPGrid() {
     cv::Mat reference = manager.matAtFrame(config.sorted[0].first);
-
     reference = Frame::centerObject(reference, reference.cols, reference.rows);
 
     int apSize = ui->apSizeSpinBox->value();
@@ -124,7 +130,6 @@ void StackPage::stack() {
         ui->percentToStackSpinBox3, ui->percentToStackSpinBox4,
         ui->percentToStackSpinBox5
     };
-
     for (auto &spinBox : spinBoxes) {
         if (spinBox->value() > 0) {
             percentages.push_back(spinBox->value());
@@ -152,6 +157,8 @@ void StackPage::initializeConfig() {
     for (int i = 0; i < manager.totalFrames(); ++i) {
         config.sorted[i].first = i;
     }
+
+    config.localAlign = ui->localAlignmentCheckBox->isChecked();
 
     // Set output dimensions as first media's dimensions
     config.outputWidth = manager[0].dimensions().width;
@@ -194,7 +201,7 @@ void StackPage::connectUI() {
     });
 
     // Alignment point size spin box
-    connect(ui->apSizeSpinBox, &QSpinBox::valueChanged, this, [this](int value) {
+    connect(ui->apSizeSpinBox, &QSpinBox::valueChanged, this, [this]() {
         estimateAPGrid();
         displayFrame(currentFrame);
     });
@@ -237,11 +244,11 @@ void StackPage::connectUI() {
     connect(ui->stackPushButton, &QPushButton::clicked, this, &StackPage::stack);
 
     // Sorting thread connections
-    connect(&sortingThread, &SortingThread::progressUpdated, this, [this](int current) {
+    connect(&sortingThread, &SortThread::progressUpdated, this, [this](int current) {
         QString status = QString("%1/%2").arg(current).arg(manager.totalFrames());
         ui->analyzingProgressEdit->setText(status);
     });
-    connect(&sortingThread, &SortingThread::finished, this, [this]() {
+    connect(&sortingThread, &SortThread::finished, this, [this]() {
         estimateAPGrid();
         displayFrame(0);
         enableConfigEdit();
@@ -258,6 +265,15 @@ void StackPage::connectUI() {
         // Open output directory
         QDesktopServices::openUrl(QUrl::fromLocalFile(outputDir));
     });
+}
+
+void StackPage::loadSettings() {
+    QSettings settings;
+    ui->percentToStackSpinBox1->setValue(settings.value("stack-page/stack-percent-1").toInt());
+    ui->percentToStackSpinBox2->setValue(settings.value("stack-page/stack-percent-2").toInt());
+    ui->percentToStackSpinBox3->setValue(settings.value("stack-page/stack-percent-3").toInt());
+    ui->percentToStackSpinBox4->setValue(settings.value("stack-page/stack-percent-4").toInt());
+    ui->percentToStackSpinBox5->setValue(settings.value("stack-page/stack-percent-5").toInt());
 }
 
 void StackPage::updateOutputDimensions() {

@@ -1,30 +1,42 @@
 #include "stack_thread.h"
+#include <QDateTime>
 
 StackThread::StackThread(
-    MediaManager &manager,
+    MediaCollection &manager,
     StackConfig &config,
     std::vector<int> &percentages,
     QString &outputDir,
     QObject *parent
 ) : Thread(parent), manager(manager), config(config), percentages(percentages), outputDir(outputDir)
-{
-    connect(&stacker, &Stacker::progressUpdated, this, [this](QString status) {
-        emit frameProcessed(status);
-    });
-}
+{}
 
 void StackThread::run() {
     for (auto &percent : percentages) {
-        emit statusUpdated(QString("Stacking %1...").arg(percent));
+        emit statusUpdated(QString("Stacking %1%...").arg(percent));
 
         int framesToStack = percent * manager.totalFrames() / 100;
 
         StackConfig currentConfig = config;
         currentConfig.sorted = std::vector(config.sorted.begin(), config.sorted.begin() + framesToStack);
 
-        cv::Mat stacked = stacker.stack(manager, currentConfig);
-        QString filePath = outputDir + QString("/proxima-stacked-%1.tif").arg(percent);
-        cv::imwrite(filePath.toStdString(), stacked);
+        auto updateProgress = [this](int current, int total) {
+            QMetaObject::invokeMethod(this, [this, current, total] {
+                QString progress = QString("%1/%2").arg(current).arg(total);
+                emit frameProcessed(progress);
+            });
+        };
+
+        cv::Mat stacked = Stacker::stack(manager, currentConfig, updateProgress);
+        stacked.convertTo(stacked, CV_16UC3, 65535.0 / 255.0);
+
+        QString parameters = QString("%1-%2-%3")
+            .arg(percent)
+            .arg(currentConfig.localAlign ? "local-" + QString::number(config.aps.size()) + "aps" : "global")
+            .arg(QDateTime::currentDateTime().toString("dd-MM-yyyy-HH-mm-ss"));
+
+        QString filePath = outputDir + "/proxima-stacked-" + parameters + ".tif";
+
+        cv::imwrite(filePath.toStdString(), stacked, {cv::IMWRITE_TIFF_COMPRESSION, 1});
     }
 
     emit statusUpdated("Done!");

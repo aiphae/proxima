@@ -2,10 +2,10 @@
 #include "components/frame.h"
 
 //
-// Performs stacking on a series of frames managed by a MediaManager,
+// Performs stacking on a series of frames managed by a MediaCollection,
 // with support for global and local alignment using a weighted averaging approach.
 //
-cv::Mat Stacker::stack(MediaManager &manager, StackConfig &config, IterationCallback callback) {
+cv::Mat Stacker::stack(MediaCollection &manager, StackConfig &config, IterationCallback callback) {
     cv::Mat reference = manager.matAtFrame(config.sorted[0].first);
     if (reference.empty()) {
         return {};
@@ -155,6 +155,8 @@ cv::Mat Stacker::stack(MediaManager &manager, StackConfig &config, IterationCall
         cv::merge(weightsChannels, 3, weights3);
         cv::divide(globalAccumulator, weights3, result);
     }
+
+    result = Frame::expandBorders(result, config.outputWidth, config.outputHeight);
 
     return result;
 }

@@ -4,7 +4,7 @@
 #include <opencv2/opencv.hpp>
 
 // Computes shift between 'reference' and 'target' with subpixel precision
-cv::Point2f computeShift(cv::Mat reference, cv::Mat target);
+cv::Point2f computeShift(cv::Mat reference, cv::Mat target, double confidence = 0.85);
 
 // Single alignment poit
 class AlignmentPoint {
@@ -33,7 +33,7 @@ public:
 
     static AlignmentPointSet estimate(cv::Mat frame, Config config);
     bool empty() { return aps.empty(); }
-    int size() { return aps.size(); }
+    int size() { return static_cast<int>(aps.size()); }
     void clear() { aps.clear(); }
 
     // Range-based for loop support

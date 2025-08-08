@@ -18,29 +18,28 @@ const QSet<QString> videoExtensions = {
 // and provides ability to extract specific frames from it
 class MediaFile {
 public:
-    MediaFile(const QString& filename);
+    MediaFile(const QString &filename);
     ~MediaFile();
 
     bool isValid() const { return _isValid; }
-    bool isVideo() const { return _isVideo; }
-    int frames() const { return _frames; }
+    bool isVideo() const { return _isVideo; };
+    int frames() const { return _frames; };
     cv::Size dimensions() const { return _dimensions; }
     std::string extension() const { return _extension; }
     std::string filename() const { return _filename; }
-
+    std::string path() const { return _path; }
     cv::Mat matAtFrame(int frame);
+    std::vector<cv::Mat> matsAtFrames(std::vector<int> &frames);
 
-    MediaFile(MediaFile&& other) noexcept;
-    MediaFile& operator=(MediaFile&& other) noexcept;
+    MediaFile(MediaFile &&other) noexcept;
+    MediaFile& operator=(MediaFile &&other) noexcept;
 
-    MediaFile(const MediaFile&) = delete;
-    MediaFile& operator=(const MediaFile&) = delete;
+    MediaFile(const MediaFile &) = delete;
+    MediaFile& operator=(const MediaFile &) = delete;
+
+    bool operator<(const MediaFile &other) { return _path < other._path; }
 
 private:
-    void loadBlock(const size_t blockIndex);
-
-    static constexpr int BLOCK_SIZE = 100;
-
     cv::Mat image;
     cv::VideoCapture video;
 
@@ -50,10 +49,10 @@ private:
     cv::Size _dimensions = {0, 0};
     std::string _extension;
     std::string _filename;
+    std::string _path;
 
-    std::vector<cv::Mat> currentBlock;
-    size_t currentBlockIndex = -1;
     std::mutex videoMutex;
+    int previousFrame = -1;
 };
 
 #endif // MEDIA_FILE_H

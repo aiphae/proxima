@@ -2,6 +2,8 @@
 #define PROCESS_PAGE_H
 
 #include <QWidget>
+#include <QSlider>
+#include <QDoubleSpinBox>
 #include "components/display.h"
 #include "processing/image_processor.h"
 
@@ -23,7 +25,12 @@ private slots:
 private:
     // UI and responsiveness
     Ui::ProcessPage *ui;
+    void setupUI();
     void connectUI();
+    void resetUI();
+
+    // Wavelets elements
+    std::vector<QSlider *> gainSliders;
 
     // Display
     std::unique_ptr<Display> display;

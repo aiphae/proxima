@@ -2,14 +2,14 @@
 #define SORT_THREAD_H
 
 #include "threading/thread.h"
-#include "data/media_manager.h"
+#include "data/media_collection.h"
 
-class SortingThread : public Thread {
+class SortThread : public Thread {
     Q_OBJECT
 
 public:
-    explicit SortingThread(
-        MediaManager &manager,
+    explicit SortThread(
+        MediaCollection &manager,
         std::vector<std::pair<int, double>> &sorted,
         QObject *parent = nullptr
     );
@@ -22,7 +22,7 @@ protected:
     void run() override;
 
 private:
-    MediaManager &manager;
+    MediaCollection &manager;
     std::vector<std::pair<int, double>> &sorted;
 };
 

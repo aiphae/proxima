@@ -10,7 +10,7 @@ StackingDialog::StackingDialog(QWidget *parent)
 {
     ui->setupUi(this);
 
-    connect(ui->analyzeFramesPushButton, &QPushButton::clicked, this, &StackingDialog::analyzeFiles);
+    connect(ui->analyzeFramesPushButton, &QPushButton::clicked, this, &StackingDialog::_analyzeFiles);
 }
 
 StackingDialog::~StackingDialog() {
@@ -19,60 +19,80 @@ StackingDialog::~StackingDialog() {
 
 void StackingDialog::includeFile(MediaFile *file, bool flag) {
     if (flag) {
-        files.addFile(file);
+        _files.addFile(file);
     }
     else {
-        files.removeFile(file);
+        _files.removeFile(file);
     }
-    ui->selectedFilesEdit->setText(QString::number(files.fileCount()));
-    ui->totalFramesEdit->setText(QString::number(files.totalFrames()));
+    ui->selectedFilesEdit->setText(QString::number(_files.fileCount()));
+    ui->totalFramesEdit->setText(QString::number(_files.totalFrames()));
 
-    if (files.fileCount() > 0) {
+    if (_files.fileCount() > 0) {
         ui->analyzeGroupBox->setEnabled(true);
     }
 }
 
-void StackingDialog::analyzeFiles() {
-    frameQualities.clear();
-    frameQualities.resize(files.totalFrames());
+void StackingDialog::_analyzeFiles() {
+    _frameQualities.clear();
+    _frameQualities.resize(_files.totalFrames());
 
-    enableStackingOptions(false);
+    // Block UI while processing
+    _enableStackingOptions(false);
+    this->setEnabled(false);
 
     // Background thread is needed to not block the main GUI
     std::thread([this] {
-        // '- 1' for the outer thread
+        // Save one thread for the GUI, and one for the outer thread
         asio::thread_pool pool(std::thread::hardware_concurrency() - 2);
 
         // Progress counter
         auto counter = std::make_shared<std::atomic<int>>(0);
 
-        for (int i = 0; i < files.totalFrames(); ++i) {
+        for (int i = 0; i < _files.totalFrames(); ++i) {
             asio::post(pool, [this, counter, i]() {
-                cv::Mat frame = files.matAtFrame(i);
-                frameQualities[i].first = i;
-                frameQualities[i].second = Frame::estimateQuality(frame);
+                cv::Mat frame = _files.matAtFrame(i);
+                _frameQualities[i].first = i;
+                _frameQualities[i].second = Frame::estimateQuality(frame);
 
-                // Update progress
+                // Update progress from the MAIN thread
                 QMetaObject::invokeMethod(this, [this, counter] {
-                    ui->analyzingProgressEdit->setText(QString::number(++(*counter)) + "/" + QString::number(files.totalFrames()));
+                    ui->analyzingProgressEdit->setText(QString::number(++(*counter)) + "/" + QString::number(_files.totalFrames()));
                 });
             });
         }
 
+        // Wait until all frames are processed
         pool.join();
 
-        std::stable_sort(frameQualities.begin(), frameQualities.end(), [](const auto &a, const auto &b) {
+        // Sort frames by quality (pair.second)
+        std::stable_sort(_frameQualities.begin(), _frameQualities.end(), [](const auto &a, const auto &b) {
             return a.second > b.second;
         });
 
-        QMetaObject::invokeMethod(this, [this] {
+        for (const auto &[id, quality] : _frameQualities) {
+            qDebug() << id << quality;
+        }
+
+        // Extract only indices from the vector of pairs
+        std::vector<int> map;
+        map.reserve(_frameQualities.size());
+        for (const auto &[id, quality] : _frameQualities) {
+            map.push_back(id);
+        }
+
+        // When finished, invoke this from the MAIN thread:
+        QMetaObject::invokeMethod(this, [this, map] {
             ui->analyzingProgressEdit->setText("Completed!");
-            enableStackingOptions(true);
+            _enableStackingOptions(true);
+            this->setEnabled(true);
+
+            // Send a signal to the MainWindow to update the GUI
+            emit analyzeFinished(&_files, map);
         });
-    }).detach();
+    }).detach(); // Detach to keep the app responsive while processing
 }
 
-void StackingDialog::enableStackingOptions(bool flag) {
+void StackingDialog::_enableStackingOptions(bool flag) {
     ui->alignmentGroupBox->setEnabled(flag);
     ui->optionsGroupBox->setEnabled(flag);
     ui->stackGroupBox->setEnabled(flag);

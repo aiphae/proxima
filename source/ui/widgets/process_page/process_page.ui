@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1069</width>
-    <height>804</height>
+    <width>1065</width>
+    <height>807</height>
    </rect>
   </property>
   <property name="font">
@@ -29,7 +29,7 @@
      </property>
      <property name="maximumSize">
       <size>
-       <width>250</width>
+       <width>300</width>
        <height>16777215</height>
       </size>
      </property>
@@ -87,39 +87,154 @@
         <property name="flat">
          <bool>true</bool>
         </property>
-        <layout class="QVBoxLayout" name="verticalLayout_3">
-         <item>
-          <widget class="QSlider" name="horizontalSlider">
+        <layout class="QGridLayout" name="gridLayout_4">
+         <item row="4" column="2">
+          <widget class="QSlider" name="gainSlider4">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimum">
+            <number>50</number>
+           </property>
+           <property name="maximum">
+            <number>1000</number>
+           </property>
            <property name="orientation">
             <enum>Qt::Orientation::Horizontal</enum>
            </property>
           </widget>
          </item>
-         <item>
-          <widget class="QSlider" name="horizontalSlider_2">
+         <item row="3" column="0">
+          <widget class="QLabel" name="layer3Label">
+           <property name="text">
+            <string>3:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="0">
+          <widget class="QLabel" name="layerLabel">
+           <property name="text">
+            <string>L.:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="0">
+          <widget class="QLabel" name="layer2Label">
+           <property name="text">
+            <string>2:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="5" column="2">
+          <widget class="QSlider" name="gainSlider5">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimum">
+            <number>50</number>
+           </property>
+           <property name="maximum">
+            <number>1000</number>
+           </property>
            <property name="orientation">
             <enum>Qt::Orientation::Horizontal</enum>
            </property>
           </widget>
          </item>
-         <item>
-          <widget class="QSlider" name="horizontalSlider_3">
+         <item row="5" column="0">
+          <widget class="QLabel" name="layer5Label">
+           <property name="text">
+            <string>5:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="2">
+          <widget class="QLabel" name="gainLabel">
+           <property name="text">
+            <string>Gain:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="2">
+          <widget class="QSlider" name="gainSlider2">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimum">
+            <number>50</number>
+           </property>
+           <property name="maximum">
+            <number>1000</number>
+           </property>
            <property name="orientation">
             <enum>Qt::Orientation::Horizontal</enum>
            </property>
           </widget>
          </item>
-         <item>
-          <widget class="QSlider" name="horizontalSlider_4">
+         <item row="3" column="2">
+          <widget class="QSlider" name="gainSlider3">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimum">
+            <number>50</number>
+           </property>
+           <property name="maximum">
+            <number>1000</number>
+           </property>
            <property name="orientation">
             <enum>Qt::Orientation::Horizontal</enum>
            </property>
           </widget>
          </item>
-         <item>
-          <widget class="QSlider" name="horizontalSlider_5">
+         <item row="1" column="0">
+          <widget class="QLabel" name="layer1Label">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="text">
+            <string>1:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="2">
+          <widget class="QSlider" name="gainSlider1">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimum">
+            <number>50</number>
+           </property>
+           <property name="maximum">
+            <number>9000</number>
+           </property>
            <property name="orientation">
             <enum>Qt::Orientation::Horizontal</enum>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="0">
+          <widget class="QLabel" name="layer4Label">
+           <property name="text">
+            <string>4:</string>
            </property>
           </widget>
          </item>
@@ -287,7 +402,7 @@
     </widget>
    </item>
    <item row="0" column="1">
-    <widget class="QLabel" name="imageDisplay">
+    <widget class="Display" name="imageDisplay">
      <property name="text">
       <string/>
      </property>
@@ -298,6 +413,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>Display</class>
+   <extends>QLabel</extends>
+   <header>components/display.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

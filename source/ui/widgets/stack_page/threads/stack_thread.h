@@ -3,7 +3,7 @@
 
 #include "threading/thread.h"
 #include "stacking/stacker.h"
-#include "data/media_manager.h"
+#include "data/media_collection.h"
 #include <QObject>
 
 class StackThread : public Thread {
@@ -11,7 +11,7 @@ class StackThread : public Thread {
 
 public:
     explicit StackThread(
-        MediaManager &manager,
+        MediaCollection &manager,
         StackConfig &config,
         std::vector<int> &percentages,
         QString &outputDir,
@@ -27,8 +27,7 @@ protected:
     void run() override;
 
 private:
-    Stacker stacker;
-    MediaManager &manager;
+    MediaCollection &manager;
     StackConfig &config;
     std::vector<int> &percentages;
     QString &outputDir;
