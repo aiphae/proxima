@@ -27,10 +27,6 @@ void MediaViewer::show(std::variant<MediaFile *, MediaCollection> source,
         _map = map.value();
     }
 
-    for (const auto &value : _map) {
-        qDebug() << value;
-    }
-
     int totalFrames;
     if (std::holds_alternative<MediaFile *>(source)) {
         totalFrames = std::get<MediaFile *>(source)->frames();
@@ -56,6 +52,8 @@ void MediaViewer::clear() {
 }
 
 void MediaViewer::_showFrame(int frame) {
+    _currentFrame = frame;
+
     int mapped = frame;
     if (!_map.empty() && frame < _map.size()) {
         mapped = _map[frame];
@@ -74,4 +72,9 @@ void MediaViewer::_showFrame(int frame) {
     }
 
     _display->show(mat);
+}
+
+void MediaViewer::setModifyingFunction(ModifyingFunction func) {
+    _func = func;
+    _showFrame(_currentFrame);
 }

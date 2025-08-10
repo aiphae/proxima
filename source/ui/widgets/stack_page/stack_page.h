@@ -45,7 +45,7 @@ private:
 
     // Separate threads to keep the UI responsive
     SortThread sortingThread;
-    StackThread stackingThread;
+    // StackThread stackingThread;
 
     // Needed to initialize 'stackingThread'
     QString outputDir;

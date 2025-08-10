@@ -3,14 +3,48 @@
 #include "components/frame.h"
 #include "boost/asio/thread_pool.hpp"
 #include "boost/asio/post.hpp"
+#include "stacking/alignment.h"
+#include "threading/analyze_thread.h"
+#include <QMessageBox>
+#include <QDebug>
 
 StackingDialog::StackingDialog(QWidget *parent)
     : QDialog(parent)
     , ui(new Ui::StackingDialog)
+    , _analyzingThread(_files, _frameQualities)
 {
     ui->setupUi(this);
+    this->setWindowTitle("Stacking (Proxima)");
 
     connect(ui->analyzeFramesPushButton, &QPushButton::clicked, this, &StackingDialog::_analyzeFiles);
+
+    connect(ui->localAlignmentCheckBox, &QCheckBox::checkStateChanged, this, [this](Qt::CheckState state) {
+        ui->alignmentOptionsFrame->setEnabled(state == Qt::Checked);
+    });
+
+    connect(&_analyzingThread, &AnalyzeThread::progressUpdated, this, [this](int current) {
+        ui->analyzingProgressEdit->setText(QString::number(current) + "/" + QString::number(_files.totalFrames()));
+    });
+
+    connect(&_analyzingThread, &AnalyzeThread::finished, this, [this]() {
+        ui->analyzingProgressEdit->setText("Finished!");
+
+        // Extract only indices from the <index, quality> vector
+        std::vector<int> map;
+        map.reserve(_frameQualities.size());
+        for (const auto &[id, quality] : _frameQualities) {
+            map.push_back(id);
+        }
+
+        _updateOutputDimensions();
+
+        // Enable UI
+        _enableStackingOptions(true);
+        this->setEnabled(true);
+
+        // Show sorted frames in main window
+        emit analyzeFinished(&_files, map);
+    });
 }
 
 StackingDialog::~StackingDialog() {
@@ -24,6 +58,7 @@ void StackingDialog::includeFile(MediaFile *file, bool flag) {
     else {
         _files.removeFile(file);
     }
+
     ui->selectedFilesEdit->setText(QString::number(_files.fileCount()));
     ui->totalFramesEdit->setText(QString::number(_files.totalFrames()));
 
@@ -33,6 +68,11 @@ void StackingDialog::includeFile(MediaFile *file, bool flag) {
 }
 
 void StackingDialog::_analyzeFiles() {
+    if (!_files.allDimensionsEqual()) {
+        QMessageBox::critical(this, "Error", "All files must have the same dimension.");
+        return;
+    }
+
     _frameQualities.clear();
     _frameQualities.resize(_files.totalFrames());
 
@@ -40,56 +80,7 @@ void StackingDialog::_analyzeFiles() {
     _enableStackingOptions(false);
     this->setEnabled(false);
 
-    // Background thread is needed to not block the main GUI
-    std::thread([this] {
-        // Save one thread for the GUI, and one for the outer thread
-        asio::thread_pool pool(std::thread::hardware_concurrency() - 2);
-
-        // Progress counter
-        auto counter = std::make_shared<std::atomic<int>>(0);
-
-        for (int i = 0; i < _files.totalFrames(); ++i) {
-            asio::post(pool, [this, counter, i]() {
-                cv::Mat frame = _files.matAtFrame(i);
-                _frameQualities[i].first = i;
-                _frameQualities[i].second = Frame::estimateQuality(frame);
-
-                // Update progress from the MAIN thread
-                QMetaObject::invokeMethod(this, [this, counter] {
-                    ui->analyzingProgressEdit->setText(QString::number(++(*counter)) + "/" + QString::number(_files.totalFrames()));
-                });
-            });
-        }
-
-        // Wait until all frames are processed
-        pool.join();
-
-        // Sort frames by quality (pair.second)
-        std::stable_sort(_frameQualities.begin(), _frameQualities.end(), [](const auto &a, const auto &b) {
-            return a.second > b.second;
-        });
-
-        for (const auto &[id, quality] : _frameQualities) {
-            qDebug() << id << quality;
-        }
-
-        // Extract only indices from the vector of pairs
-        std::vector<int> map;
-        map.reserve(_frameQualities.size());
-        for (const auto &[id, quality] : _frameQualities) {
-            map.push_back(id);
-        }
-
-        // When finished, invoke this from the MAIN thread:
-        QMetaObject::invokeMethod(this, [this, map] {
-            ui->analyzingProgressEdit->setText("Completed!");
-            _enableStackingOptions(true);
-            this->setEnabled(true);
-
-            // Send a signal to the MainWindow to update the GUI
-            emit analyzeFinished(&_files, map);
-        });
-    }).detach(); // Detach to keep the app responsive while processing
+    _analyzingThread.start();
 }
 
 void StackingDialog::_enableStackingOptions(bool flag) {
@@ -97,4 +88,28 @@ void StackingDialog::_enableStackingOptions(bool flag) {
     ui->optionsGroupBox->setEnabled(flag);
     ui->stackGroupBox->setEnabled(flag);
     ui->outputGroupBox->setEnabled(flag);
+}
+
+void StackingDialog::_estimateAlignmentConfig() {
+    cv::Mat reference = _files.matAtFrame(_frameQualities[0].first);
+    reference = Frame::centerObject(reference, reference.cols, reference.rows);
+
+    int apSize = ui->apSizeSpinBox->value();
+    AlignmentPointSet::Placement placement = ui->featureBasedApsCheckBox->isChecked()
+        ? AlignmentPointSet::Placement::FeatureBased
+        : AlignmentPointSet::Placement::Uniform;
+    AlignmentPointSet::Config config{placement, apSize};
+
+    AlignmentPointSet aps = AlignmentPointSet::estimate(reference, config);
+}
+
+void StackingDialog::_updateOutputDimensions() {
+    cv::Mat frame = _files.matAtFrame(0);
+    int width = frame.cols, height = frame.rows;
+    ui->widthSpinBox->blockSignals(true);
+    ui->heightSpinBox->blockSignals(true);
+    ui->widthSpinBox->setValue(width);
+    ui->heightSpinBox->setValue(height);
+    ui->widthSpinBox->blockSignals(false);
+    ui->heightSpinBox->blockSignals(false);
 }

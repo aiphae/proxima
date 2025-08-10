@@ -1,6 +1,5 @@
 #include "main_window/main_window.h"
 #include <QApplication>
-#include <opencv2/core/version.hpp>
 
 int main(int argc, char *argv[]) {
     QApplication a(argc, argv);

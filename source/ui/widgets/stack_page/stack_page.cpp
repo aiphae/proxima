@@ -1,5 +1,4 @@
 #include "stack_page.h"
-#include "threads/stack_thread.h"
 #include "ui_stack_page.h"
 #include "components/frame.h"
 #include <QFileDialog>
@@ -14,7 +13,7 @@ StackPage::StackPage(QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::StackPage)
     , sortingThread(manager, config.sorted)
-    , stackingThread(manager, config, percentages, outputDir)
+    // , stackingThread(manager, config, percentages, outputDir)
 {
     ui->setupUi(this);
     connectUI();
@@ -140,7 +139,7 @@ void StackPage::stack() {
         return;
     }
 
-    stackingThread.start();
+    // stackingThread.start();
 }
 
 //
@@ -255,16 +254,16 @@ void StackPage::connectUI() {
     });
 
     // Stacking thread connections
-    connect(&stackingThread, &StackThread::frameProcessed, this, [this](QString status) {
-        ui->stackingProgressEdit->setText(status);
-    });
-    connect(&stackingThread, &StackThread::statusUpdated, this, [this](QString status) {
-        ui->statusEdit->setText(status);
-    });
-    connect(&stackingThread, &StackThread::finished, this, [this]() {
-        // Open output directory
-        QDesktopServices::openUrl(QUrl::fromLocalFile(outputDir));
-    });
+    // connect(&stackingThread, &StackThread::frameProcessed, this, [this](QString status) {
+    //     ui->stackingProgressEdit->setText(status);
+    // });
+    // connect(&stackingThread, &StackThread::statusUpdated, this, [this](QString status) {
+    //     ui->statusEdit->setText(status);
+    // });
+    // connect(&stackingThread, &StackThread::finished, this, [this]() {
+    //     // Open output directory
+    //     QDesktopServices::openUrl(QUrl::fromLocalFile(outputDir));
+    // });
 }
 
 void StackPage::loadSettings() {

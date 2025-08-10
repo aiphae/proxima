@@ -27,6 +27,7 @@ private:
     std::vector<int> _map;
     std::function<void(cv::Mat &)> _func;
 
+    int _currentFrame = 0;
     void _showFrame(int frame);
 };
 

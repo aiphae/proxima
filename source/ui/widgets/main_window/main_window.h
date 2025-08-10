@@ -3,6 +3,7 @@
 
 #include <QMainWindow>
 #include "data/media_file.h"
+#include "stacking_dialog/stacking_dialog.h"
 
 namespace Ui {
 class MainWindow;
@@ -17,11 +18,13 @@ public:
 
 private:
     Ui::MainWindow *ui;
-    void connectUI();
-    void setupUI();
+    void _connectUI();
+    void _setupUI();
 
-    MediaFile *currentFile;
-    void showFile();
+    MediaFile *_currentFile;
+    void _showFile();
+
+    StackingDialog *_initializeStackingDialog();
 };
 
 #endif // MAIN_WINDOW_H

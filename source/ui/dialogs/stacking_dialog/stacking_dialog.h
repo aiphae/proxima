@@ -3,6 +3,8 @@
 
 #include <QDialog>
 #include "data/media_collection.h"
+#include "threading/analyze_thread.h"
+#include "stacking/stacker.h"
 
 namespace Ui {
 class StackingDialog;
@@ -28,10 +30,15 @@ private:
     Ui::StackingDialog *ui;
     MediaCollection _files;
 
+    AnalyzeThread _analyzingThread;
     void _analyzeFiles();
     void _enableStackingOptions(bool flag);
-
     std::vector<std::pair<int, double>> _frameQualities;
+
+    void _estimateAlignmentConfig();
+    void _updateOutputDimensions();
+
+    _StackConfig _config;
 };
 
 #endif // STACKING_DIALOG_H
