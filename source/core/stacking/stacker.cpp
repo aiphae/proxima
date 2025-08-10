@@ -1,11 +1,92 @@
 #include "stacker.h"
 #include "components/frame.h"
 
+void Stacker::initialize(cv::Mat reference, const _StackConfig &config) {
+    _reference = reference;
+    _reference = Frame::centerObject(reference, reference.cols, reference.rows);
+
+    _config = config;
+
+    // Initialize internal accumulators
+    cv::Size upsampledSize{
+        static_cast<int>(_reference.cols * _config.upsample),
+        static_cast<int>(_reference.rows * _config.upsample)
+    };
+    _localAccumulator = cv::Mat::zeros(upsampledSize, CV_32FC3);
+    _localWeights = cv::Mat::zeros(upsampledSize, CV_32F);
+    _globalAccumulator = _localAccumulator.clone();
+    _globalWeights = _localWeights.clone();
+
+    // Include reference frame
+    _globalAccumulator += _reference * 1.0f;
+    _globalWeights += 1.0f;
+}
+
+void Stacker::add(cv::Mat mat, double weight) {
+    // ...
+}
+
+cv::Mat Stacker::average() {
+    // Final result mat
+    cv::Mat result(_globalAccumulator.size(), CV_32FC3);
+
+    // Combine local and global accumulations
+    if (_config.aps) {
+        for (int y = 0; y < result.rows; ++y) {
+            for (int x = 0; x < result.cols; ++x) {
+                float localW = _localWeights.at<float>(y, x);
+                if (localW > 0.0f) {
+                    result.at<cv::Vec3f>(y, x) = _localAccumulator.at<cv::Vec3f>(y, x) / localW;
+                }
+                else {
+                    float globalW = _globalWeights.at<float>(y, x);
+                    result.at<cv::Vec3f>(y, x) = _globalAccumulator.at<cv::Vec3f>(y, x) / globalW;
+                }
+            }
+        }
+    }
+    // Normalize global accumulation only
+    else {
+        cv::Mat weights3;
+        cv::Mat weightsChannels[] {_globalWeights, _globalWeights, _globalWeights};
+        cv::merge(weightsChannels, 3, weights3);
+        cv::divide(_globalAccumulator, weights3, result);
+    }
+
+    // Expand borders (padding with black)
+    cv::Size expandSize{
+        static_cast<int>(_config.outputWidth * _config.upsample),
+        static_cast<int>(_config.outputHeight * _config.upsample)
+    };
+    result = Frame::expandBorders(result, expandSize.width, expandSize.height);
+
+    return result;
+}
+
+void Stacker::reset() {
+    _reference.release();
+    _globalAccumulator.release();
+    _globalWeights.release();
+    _localAccumulator.release();
+    _localWeights.release();
+    _config = _StackConfig();
+}
+
 //
-// Performs stacking on a series of frames managed by a MediaManager,
+// Performs stacking on a series of frames managed by a MediaCollection,
 // with support for global and local alignment using a weighted averaging approach.
 //
-cv::Mat Stacker::stack(MediaManager &manager, StackConfig &config, IterationCallback callback) {
+
+// TODO!
+// Change structure
+// add internal storages for stacking
+// Stacker::addFrame() method <- ALLOWS MULTITHREADING and NO NEED FOR A SEPARATE THREAD OBJECT (just std::thread(...).detach();)
+// and/or callbacks
+// Stacker stacker(
+//
+// (MAYBE!) StackJob for every stacking run
+
+cv::Mat Stacker::stack(MediaCollection &manager, StackConfig &config, IterationCallback callback) {
     cv::Mat reference = manager.matAtFrame(config.sorted[0].first);
     if (reference.empty()) {
         return {};
@@ -131,30 +212,5 @@ cv::Mat Stacker::stack(MediaManager &manager, StackConfig &config, IterationCall
         }
     }
 
-    // Final result mat
-    cv::Mat result(globalAccumulator.size(), CV_32FC3);
-    // Combine local and global accumulations
-    if (config.localAlign) {
-        for (int y = 0; y < result.rows; ++y) {
-            for (int x = 0; x < result.cols; ++x) {
-                float localW = localWeights.at<float>(y, x);
-                if (localW > 0.0f) {
-                    result.at<cv::Vec3f>(y, x) = localAccumulator.at<cv::Vec3f>(y, x) / localW;
-                }
-                else {
-                    float globalW = globalWeights.at<float>(y, x);
-                    result.at<cv::Vec3f>(y, x) = globalAccumulator.at<cv::Vec3f>(y, x) / globalW;
-                }
-            }
-        }
-    }
-    // Normalize global accumulation only
-    else {
-        cv::Mat weights3;
-        cv::Mat weightsChannels[] {globalWeights, globalWeights, globalWeights};
-        cv::merge(weightsChannels, 3, weights3);
-        cv::divide(globalAccumulator, weights3, result);
-    }
 
-    return result;
 }

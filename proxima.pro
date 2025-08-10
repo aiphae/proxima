@@ -13,6 +13,8 @@ SOURCES += \
     source/core/processing/wavelets.cpp \
     source/core/stacking/alignment.cpp \
     source/core/stacking/stacker.cpp \
+    source/threading/analyze_thread.cpp \
+    source/threading/stack_thread.cpp \
     source/ui/dialogs/deconvolution_dialog/deconvolution_dialog.cpp \
     source/ui/dialogs/deconvolution_dialog/image_viewer.cpp \
     source/ui/dialogs/rgb_align_dialog/rgb_align_dialog.cpp \
@@ -23,7 +25,6 @@ SOURCES += \
     source/main.cpp \
     source/ui/widgets/stack_page/stack_page.cpp \
     source/ui/widgets/stack_page/threads/sort_thread.cpp \
-    source/ui/widgets/stack_page/threads/stack_thread.cpp \
     source/ui/workspace.cpp
 
 HEADERS += \
@@ -37,6 +38,8 @@ HEADERS += \
     source/core/processing/wavelets.h \
     source/core/stacking/alignment.h \
     source/core/stacking/stacker.h \
+    source/threading/analyze_thread.h \
+    source/threading/stack_thread.h \
     source/threading/thread.h \
     source/threading/thread_pool.h \
     source/ui/dialogs/deconvolution_dialog/deconvolution_dialog.h \
@@ -48,16 +51,15 @@ HEADERS += \
     source/ui/widgets/process_page/process_page.h \
     source/ui/widgets/stack_page/stack_page.h \
     source/ui/widgets/stack_page/threads/sort_thread.h \
-    source/ui/widgets/stack_page/threads/stack_thread.h \
     source/ui/workspace.h \
 
 FORMS += \
+    source/dialog.ui \
     source/ui/dialogs/deconvolution_dialog/deconvolution_dialog.ui \
     source/ui/dialogs/rgb_align_dialog/rgb_align_dialog.ui \
     source/ui/dialogs/stacking_dialog/stacking_dialog.ui \
     source/ui/widgets/main_window/main_window.ui \
     source/ui/widgets/process_page/process_page.ui \
-    source/form.ui \
     source/ui/widgets/stack_page/stack_page.ui
 
 INCLUDEPATH += \
@@ -70,9 +72,9 @@ INCLUDEPATH += \
 INCLUDEPATH += $$PWD/libs
 
 # OpenCV
-win32:CONFIG(release, debug|release): LIBS += -LC:/libs/opencv/build/x64/vc16/lib/ -lopencv_world4110
-else:win32:CONFIG(debug, debug|release): LIBS += -LC:/libs/opencv/build/x64/vc16/lib/ -lopencv_world4110d
-else:unix: LIBS += -LC:/libs/opencv/build/x64/vc16/lib/ -lopencv_world4110
+win32:CONFIG(release, debug|release): LIBS += -LC:/libs/opencv/build/x64/vc16/lib/ -lopencv_world4120
+else:win32:CONFIG(debug, debug|release): LIBS += -LC:/libs/opencv/build/x64/vc16/lib/ -lopencv_world4120d
+else:unix: LIBS += -LC:/libs/opencv/build/x64/vc16/lib/ -lopencv_world4120
 INCLUDEPATH += C:/libs/opencv/build/include
 DEPENDPATH += C:/libs/opencv/build/include
 

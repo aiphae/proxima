@@ -2,7 +2,6 @@
 #define IMAGE_PROCESSOR_H
 
 #include "processing/color_correction.h"
-#include "processing/deconvolution.h"
 #include "processing/wavelets.h"
 
 class ImageProcessor {
@@ -18,12 +17,13 @@ public:
     void setContrast(int value);
     void setSaturation(int value);
 
+    void setWaveletsGains(std::vector<float> &gains);
+
 private:
     cv::Mat original;
     cv::Mat clone;
 
     ColorCorrection colorCorrection;
-    Deconvolution deconvolution;
     Wavelets wavelets;
 };
 

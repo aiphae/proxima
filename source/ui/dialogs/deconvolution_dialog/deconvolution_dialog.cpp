@@ -1,6 +1,5 @@
 #include "deconvolution_dialog.h"
 #include "ui_deconvolution_dialog.h"
-#include "components/frame.h"
 
 DeconvolutionDialog::DeconvolutionDialog(cv::Mat &mat, QWidget *parent)
     : QDialog(parent)
@@ -9,11 +8,7 @@ DeconvolutionDialog::DeconvolutionDialog(cv::Mat &mat, QWidget *parent)
 {
     ui->setupUi(this);
 
-    int previewSize = std::min(std::min(original.cols, original.rows), 200);
-    preview = Frame::centerObject(original, previewSize, previewSize);
-
     ui->previewDisplay->loadOriginal(mat);
-    psfDisplay = std::make_unique<Display>(ui->psfDisplay);
 
     connect(ui->iterationsSpinBox, &QSpinBox::valueChanged, this, [this](int value) {
         ui->iterationsSlider->blockSignals(true);
@@ -100,5 +95,8 @@ void DeconvolutionDialog::applyDeconvolution() {
 
 void DeconvolutionDialog::updatePSF() {
     config.psf = computePSF(ui->psfSizeSpinBox->value(), ui->kurtosisDoubleSpinBox->value());
-    psfDisplay->show(config.psf);
+    cv::Mat displayPsf;
+    cv::normalize(config.psf, displayPsf, 0, 255, cv::NORM_MINMAX);
+    displayPsf.convertTo(displayPsf, CV_8U);
+    psfDisplay->show(displayPsf);
 }

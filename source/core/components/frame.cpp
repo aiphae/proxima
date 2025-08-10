@@ -12,7 +12,7 @@ cv::Mat Frame::centerObject(cv::Mat frame, int width, int height) {
     cv::cvtColor(frame, processed, cv::COLOR_BGR2GRAY);
 
     // Downscale for faster object detection
-    const double scale = 0.25;
+    const double scale = 0.5;
     cv::resize(processed, processed, {}, scale, scale, cv::INTER_AREA);
 
     // Preprocess for contour detection

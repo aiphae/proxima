@@ -5,6 +5,7 @@ MediaFile::MediaFile(const QString &filename) {
     QFileInfo file(filename);
     QString extension = filename.mid(filename.lastIndexOf('.'));
     _filename = file.completeBaseName().toStdString();
+    _path = filename.toStdString();
 
     if (imageExtensions.contains(extension)) {
         image = cv::imread(filename.toStdString());
@@ -28,38 +29,60 @@ MediaFile::MediaFile(const QString &filename) {
 
 cv::Mat MediaFile::matAtFrame(int frame) {
     if (_isVideo) {
-        const size_t blockIndex = frame / BLOCK_SIZE;
         std::lock_guard<std::mutex> lock(videoMutex);
 
-        if (blockIndex != currentBlockIndex) {
-            loadBlock(blockIndex);
+        if (frame != previousFrame + 1) {
+            video.set(cv::CAP_PROP_POS_FRAMES, frame);
         }
 
-        const size_t localIndex = frame % BLOCK_SIZE;
-        if (localIndex < currentBlock.size()) {
-            return currentBlock[localIndex];
+        cv::Mat mat;
+        if (video.read(mat)) {
+            previousFrame = frame;
+            return mat;
         }
-        return cv::Mat();
+        else {
+            return {};
+        }
     }
 
     return image;
 }
 
-void MediaFile::loadBlock(const size_t blockIndex) {
-    currentBlock.clear();
-
-    size_t startFrame = blockIndex * BLOCK_SIZE;
-    video.set(cv::CAP_PROP_POS_FRAMES, startFrame);
-
-    for (size_t i = 0; i < BLOCK_SIZE && startFrame + i < _frames; ++i) {
-        cv::Mat mat;
-        if (!video.read(mat))
-            break;
-
-        currentBlock.emplace_back(std::move(mat));
+std::vector<cv::Mat> MediaFile::matsAtFrames(std::vector<int> &frames) {
+    if (!_isVideo) {
+        return {image};
     }
 
-    currentBlockIndex = blockIndex;
+    if (!frames.size()) {
+        return {};
+    }
+
+    std::lock_guard<std::mutex> lock(videoMutex);
+    video.set(cv::CAP_PROP_POS_FRAMES, 0);
+
+    int target = 0;
+    int targetIndex = frames[target];
+    int current = 0;
+
+    cv::Mat frame;
+    std::vector<cv::Mat> result;
+
+    while (video.read(frame)) {
+        if (current == targetIndex) {
+            result.push_back(frame.clone());
+            ++target;
+
+            if (target >= frames.size()) {
+                break;
+            }
+
+            targetIndex = frames[target];
+        }
+
+        ++current;
+    }
+
+    return result;
 }
 
 MediaFile::~MediaFile() {
@@ -77,7 +100,7 @@ MediaFile::MediaFile(MediaFile&& other) noexcept {
     _dimensions = other._dimensions;
     _extension = std::move(other._extension);
     _filename = std::move(other._filename);
-    // Note: don't move std::mutex — construct a new one
+    _path = std::move(other._path);
 }
 
 MediaFile& MediaFile::operator=(MediaFile&& other) noexcept {
@@ -90,7 +113,7 @@ MediaFile& MediaFile::operator=(MediaFile&& other) noexcept {
         _dimensions = other._dimensions;
         _extension = std::move(other._extension);
         _filename = std::move(other._filename);
-        // mutex — construct a new one
+        _path = std::move(other._path);
     }
     return *this;
 }

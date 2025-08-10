@@ -3,10 +3,14 @@
 
 #include <QDialog>
 #include "data/media_collection.h"
+#include "threading/analyze_thread.h"
+#include "stacking/stacker.h"
 
 namespace Ui {
 class StackingDialog;
 }
+
+using ModifyingFunction = std::function<void(cv::Mat &)>;
 
 class StackingDialog : public QDialog {
     Q_OBJECT
@@ -18,14 +22,23 @@ public:
 public slots:
     void includeFile(MediaFile *file, bool flag);
 
+signals:
+    void analyzeFinished(MediaCollection *, const std::vector<int> &);
+    void previewConfigChanged(ModifyingFunction);
+
 private:
     Ui::StackingDialog *ui;
-    MediaCollection files;
+    MediaCollection _files;
 
-    void analyzeFiles();
-    void enableStackingOptions(bool flag);
+    AnalyzeThread _analyzingThread;
+    void _analyzeFiles();
+    void _enableStackingOptions(bool flag);
+    std::vector<std::pair<int, double>> _frameQualities;
 
-    std::vector<std::pair<int, double>> frameQualities;
+    void _estimateAlignmentConfig();
+    void _updateOutputDimensions();
+
+    _StackConfig _config;
 };
 
 #endif // STACKING_DIALOG_H

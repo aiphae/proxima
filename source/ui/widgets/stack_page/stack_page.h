@@ -3,7 +3,7 @@
 
 #include <QWidget>
 #include "components/display.h"
-#include "data/media_manager.h"
+#include "data/media_collection.h"
 #include "threads/sort_thread.h"
 #include "threads/stack_thread.h"
 
@@ -29,6 +29,7 @@ private:
     void connectUI();
     void updateOutputDimensions();
     void enableConfigEdit();
+    void loadSettings();
 
     // Display
     std::unique_ptr<Display> display;
@@ -36,15 +37,15 @@ private:
     int currentFrame = 0;
 
     // Manages opened files
-    MediaManager manager;
+    MediaCollection manager;
 
     // Stacking configuration
     StackConfig config;
     void initializeConfig();
 
     // Separate threads to keep the UI responsive
-    SortingThread sortingThread;
-    StackThread stackingThread;
+    SortThread sortingThread;
+    // StackThread stackingThread;
 
     // Needed to initialize 'stackingThread'
     QString outputDir;

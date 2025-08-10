@@ -15,7 +15,7 @@ class Workspace : public QWidget {
 public:
     explicit Workspace(QWidget *parent = nullptr);
     bool addItem(const std::string &path);
-    int itemCount() { return static_cast<unsigned int>(workspaceItems.size()); }
+    int itemCount() { return static_cast<int>(_workspaceItems.size()); }
     void clear();
     void enableMultipleSelection(bool flag);
     void resetMultipleSelection();
@@ -25,22 +25,22 @@ signals:
     void itemChecked(MediaFile *, bool flag);
 
 private:
-    class WorkspaceItem;
-    std::vector<WorkspaceItem *> workspaceItems;
-    std::map<std::string, MediaFile> mediaFiles;
+    class _WorkspaceItem;
+    std::vector<_WorkspaceItem *> _workspaceItems;
+    std::map<std::string, MediaFile> _mediaFiles;
 
-    QWidget *containerWidget;
-    QVBoxLayout *containerLayout;
+    QWidget *_containerWidget;
+    QVBoxLayout *_containerLayout;
 };
 
 // A single item in the workspace
-class Workspace::WorkspaceItem : public QFrame {
+class Workspace::_WorkspaceItem : public QFrame {
     Q_OBJECT
 
 public:
-    explicit WorkspaceItem(MediaFile *file, QWidget *parent = nullptr);
-    void showCheckBox(bool flag) { checkBox->setHidden(!flag); }
-    void resetCheckBox() { checkBox->setCheckState(Qt::Unchecked); }
+    explicit _WorkspaceItem(MediaFile *file, QWidget *parent = nullptr);
+    void showCheckBox(bool flag) { _checkBox->setHidden(!flag); }
+    void resetCheckBox() { _checkBox->setCheckState(Qt::Unchecked); }
 
 signals:
     void clicked(const std::string &filePath);
@@ -50,12 +50,12 @@ protected:
     void mousePressEvent(QMouseEvent *event) override;
 
 private:
-    const std::string filePath;
-    Display *display;
-    QLabel *fileNameLabel;
-    QLabel *framesLabel;
-    QLabel *fileSizeLabel;
-    QCheckBox *checkBox;
+    const std::string _filePath;
+    Display *_display;
+    QLabel *_fileNameLabel;
+    QLabel *_framesLabel;
+    QLabel *_fileSizeLabel;
+    QCheckBox *_checkBox;
 };
 
 #endif // WORKSPACE_H
