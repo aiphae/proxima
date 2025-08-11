@@ -1,10 +1,8 @@
 #ifndef STACKER_H
 #define STACKER_H
 
-#include <QObject>
 #include <opencv2/opencv.hpp>
 #include "stacking/alignment.h"
-#include "data/media_collection.h"
 
 struct StackConfig {
     // Sorted frames as index-quality pair
@@ -23,19 +21,14 @@ struct _StackConfig {
     int outputWidth;
     int outputHeight;
     AlignmentPointSet *aps = nullptr;
-    double upsample;
+    double upsample = 1.0;
 };
 
-class Stacker : public QObject {
+class Stacker{
 public:
-    using IterationCallback = std::function<void(int, int)>;
-    static cv::Mat stack(MediaCollection &manager, StackConfig &config, IterationCallback callback = nullptr);
-
-    void initialize(cv::Mat reference, const _StackConfig &config);
+    void initialize(const cv::Mat reference, const _StackConfig &config);
     void add(cv::Mat mat, double weight);
     cv::Mat average();
-
-    void reset();
 
 private:
     cv::Mat _reference;
@@ -43,6 +36,10 @@ private:
 
     cv::Mat _localAccumulator, _localWeights;
     cv::Mat _globalAccumulator, _globalWeights;
+
+    std::mutex _mtx;
+
+    void _reset();
 };
 
 #endif // STACKER_H

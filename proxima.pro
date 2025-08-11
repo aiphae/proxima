@@ -72,9 +72,9 @@ INCLUDEPATH += \
 INCLUDEPATH += $$PWD/libs
 
 # OpenCV
-win32:CONFIG(release, debug|release): LIBS += -LC:/libs/opencv/build/x64/vc16/lib/ -lopencv_world4120
-else:win32:CONFIG(debug, debug|release): LIBS += -LC:/libs/opencv/build/x64/vc16/lib/ -lopencv_world4120d
-else:unix: LIBS += -LC:/libs/opencv/build/x64/vc16/lib/ -lopencv_world4120
+win32:CONFIG(release, debug|release): LIBS += -LC:/libs/opencv/build/x64/vc16/lib/ -lopencv_world4110
+else:win32:CONFIG(debug, debug|release): LIBS += -LC:/libs/opencv/build/x64/vc16/lib/ -lopencv_world4110d
+else:unix: LIBS += -LC:/libs/opencv/build/x64/vc16/lib/ -lopencv_world4110
 INCLUDEPATH += C:/libs/opencv/build/include
 DEPENDPATH += C:/libs/opencv/build/include
 

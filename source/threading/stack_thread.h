@@ -19,9 +19,9 @@ public:
     );
 
 signals:
-    void statusUpdated(QString status);
-    void frameProcessed(QString status);
-    void finished();
+    void statusUpdated(QString);
+    void frameProcessed(QString);
+    void finished(const std::vector<std::string> &);
 
 protected:
     void run() override;

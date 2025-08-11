@@ -15,14 +15,22 @@ _StackThread::_StackThread(
 {}
 
 void _StackThread::run() {
-    asio::thread_pool pool(std::thread::hardware_concurrency() - 2);
+    // Output paths
+    std::vector<std::string> paths(_percentages.size());
 
     for (int i = 0; i < _percentages.size(); ++i) {
-        emit statusUpdated(QString("Stacking %1...").arg(i + 1));
+        if (_percentages[i] < 1) {
+            continue;
+        }
 
-        _stacker.reset();
+        asio::thread_pool pool(std::thread::hardware_concurrency() - 2);
 
-        int framesToStack = static_cast<int>(_percentages[i] / 100 * _collection.totalFrames());
+        emit statusUpdated(QString("Stacking %1%...").arg(_percentages[i]));
+
+        _stacker.initialize(_collection.matAtFrame(0), _config);
+
+        int framesToStack = static_cast<int>(_percentages[i] / 100.0 * _collection.totalFrames());
+        qDebug() << "framesToStack: " << framesToStack << "\n";
 
         // Extract the necessary part of frames and sort them by their index.
         // This is needed because consequent access to frames is much faster than random one.
@@ -34,7 +42,8 @@ void _StackThread::run() {
         auto counter = std::make_shared<std::atomic<int>>(0);
 
         for (const auto &[index, quality] : currentStack) {
-            asio::post(pool, [this, index, quality, counter, &currentStack] {
+            asio::post(pool, [this, index, quality, counter] {
+                qDebug() << "Adding " << index << "\n";
                 _stacker.add(_collection.matAtFrame(index), quality);
                 emit frameProcessed(QString::number(++(*counter)) + "/" + QString::number(_collection.totalFrames()));
             });
@@ -54,9 +63,11 @@ void _StackThread::run() {
 
         std::string filePath = _outputDir + "/proxima-stacked" + parameters.toStdString() + ".tif";
         cv::imwrite(filePath, result, {cv::IMWRITE_TIFF_COMPRESSION, 1});
+
+        paths[i] = filePath;
     }
 
     emit statusUpdated("Done!");
-    emit finished();
+    emit finished(paths);
     running = false;
 }

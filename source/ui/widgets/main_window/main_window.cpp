@@ -89,5 +89,14 @@ StackingDialog *MainWindow::_initializeStackingDialog() {
         stackingDialog->includeFile(file, flag);
     });
 
+    connect(stackingDialog, &StackingDialog::closed, this, [this](const std::vector<std::string> &output) {
+        if (output.empty()) {
+            return;
+        }
+        for (const auto &file : output) {
+            ui->workspace->addItem(file);
+        }
+    });
+
     return stackingDialog;
 }
