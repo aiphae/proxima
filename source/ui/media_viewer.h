@@ -1,7 +1,6 @@
 #ifndef MEDIA_VIEWER_H
 #define MEDIA_VIEWER_H
 
-#include <QWidget>
 #include <QSlider>
 #include "data/media_collection.h"
 #include "components/display.h"
@@ -13,22 +12,22 @@ class MediaViewer : public QWidget {
 
 public:
     explicit MediaViewer(QWidget *parent = nullptr);
-    void show(std::variant<MediaFile *, MediaCollection> source,
+    void show(const std::variant<MediaFile *, MediaCollection> &source,
               const std::optional<std::vector<int>> &map = std::nullopt,
-              ModifyingFunction = nullptr);
-    void setModifyingFunction(ModifyingFunction);
+              const ModifyingFunction & = nullptr);
+    void setModifyingFunction(const ModifyingFunction &);
     void clear();
 
 private:
-    Display *_display;
-    QSlider *_slider;
+    Display *display_;
+    QSlider *slider_;
 
-    std::variant<MediaFile *, MediaCollection> _source;
-    std::vector<int> _map;
-    std::function<void(cv::Mat &)> _func;
+    std::variant<MediaFile *, MediaCollection> source_;
+    std::vector<int> map_;
+    std::function<void(cv::Mat &)> func_;
 
-    int _currentFrame = 0;
-    void _showFrame(int frame);
+    int currentFrame_ = 0;
+    void showFrame_(int frame);
 };
 
 #endif // MEDIA_VIEWER_H

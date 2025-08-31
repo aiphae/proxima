@@ -4,27 +4,27 @@
 MediaViewer::MediaViewer(QWidget *parent)
     : QWidget{parent}
 {
-    _display = new Display(this);
-    _display->setAlignment(Qt::AlignCenter);
-    _slider = new QSlider(Qt::Horizontal, this);
+    display_ = new Display(this);
+    display_->setAlignment(Qt::AlignCenter);
+    slider_ = new QSlider(Qt::Horizontal, this);
 
     auto layout = new QVBoxLayout(this);
-    layout->addWidget(_slider);
-    layout->addWidget(_display);
+    layout->addWidget(slider_);
+    layout->addWidget(display_);
 
     setLayout(layout);
 
-    connect(_slider, &QSlider::valueChanged, this, [this](int value) {
-        _showFrame(value);
+    connect(slider_, &QSlider::valueChanged, this, [this](const int value) {
+        showFrame_(value);
     });
 }
 
-void MediaViewer::show(std::variant<MediaFile *, MediaCollection> source,
+void MediaViewer::show(const std::variant<MediaFile *, MediaCollection> &source,
                        const std::optional<std::vector<int>> &map,
-                       ModifyingFunction func) {
-    _source = source;
+                       const ModifyingFunction &func) {
+    source_ = source;
     if (map.has_value()) {
-        _map = map.value();
+        map_ = map.value();
     }
 
     int totalFrames;
@@ -35,46 +35,46 @@ void MediaViewer::show(std::variant<MediaFile *, MediaCollection> source,
         totalFrames = std::get<MediaCollection>(source).totalFrames();
     }
 
-    _func = func;
+    func_ = func;
 
-    _slider->setMaximum(totalFrames - 1);
-    _slider->setValue(0);
-    _slider->setEnabled(totalFrames > 1);
+    slider_->setMaximum(totalFrames - 1);
+    slider_->setValue(0);
+    slider_->setEnabled(totalFrames > 1);
 
-    _showFrame(0);
+    showFrame_(0);
 }
 
 void MediaViewer::clear() {
-    _display->clear();
-    _slider->setValue(0);
-    _source = std::variant<MediaFile *, MediaCollection>();
-    _map.clear();
+    display_->clear();
+    slider_->setValue(0);
+    source_ = std::variant<MediaFile *, MediaCollection>();
+    map_.clear();
 }
 
-void MediaViewer::_showFrame(int frame) {
-    _currentFrame = frame;
+void MediaViewer::showFrame_(const int frame) {
+    currentFrame_ = frame;
 
     int mapped = frame;
-    if (!_map.empty() && frame < _map.size()) {
-        mapped = _map[frame];
+    if (!map_.empty() && frame < map_.size()) {
+        mapped = map_[frame];
     }
 
     cv::Mat mat;
-    if (std::holds_alternative<MediaFile *>(_source)) {
-        mat = std::get<MediaFile *>(_source)->matAtFrame(mapped);
+    if (std::holds_alternative<MediaFile *>(source_)) {
+        mat = std::get<MediaFile *>(source_)->matAtFrame(mapped);
     }
     else {
-        mat = std::get<MediaCollection>(_source).matAtFrame(mapped);
+        mat = std::get<MediaCollection>(source_).matAtFrame(mapped);
     }
 
-    if (_func) {
-        _func(mat);
+    if (func_) {
+        func_(mat);
     }
 
-    _display->show(mat);
+    display_->show(mat);
 }
 
-void MediaViewer::setModifyingFunction(ModifyingFunction func) {
-    _func = func;
-    _showFrame(_currentFrame);
+void MediaViewer::setModifyingFunction(const ModifyingFunction &func) {
+    func_ = func;
+    showFrame_(currentFrame_);
 }
