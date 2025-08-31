@@ -17,7 +17,7 @@ public:
     void addFile(MediaFile *file);
     void removeFile(MediaFile *file);
 
-    MediaFile &operator[](int index) {
+    MediaFile &operator[](const int index) const {
         return *_files[index];
     }
 
