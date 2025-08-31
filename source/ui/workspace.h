@@ -1,8 +1,6 @@
 #ifndef WORKSPACE_H
 #define WORKSPACE_H
 
-#include <QWidget>
-#include <QLabel>
 #include <QVBoxLayout>
 #include <QCheckBox>
 #include "data/media_file.h"
@@ -15,32 +13,32 @@ class Workspace : public QWidget {
 public:
     explicit Workspace(QWidget *parent = nullptr);
     bool addItem(const std::string &path);
-    int itemCount() { return static_cast<int>(_workspaceItems.size()); }
+    int itemCount() const { return static_cast<int>(workspaceItems_.size()); }
     void clear();
-    void enableMultipleSelection(bool flag);
-    void resetMultipleSelection();
+    void enableMultipleSelection(bool flag) const;
+    void resetMultipleSelection() const;
 
 signals:
     void itemClicked(MediaFile *);
     void itemChecked(MediaFile *, bool flag);
 
 private:
-    class _WorkspaceItem;
-    std::vector<_WorkspaceItem *> _workspaceItems;
-    std::map<std::string, MediaFile> _mediaFiles;
+    class WorkspaceItem_;
+    std::vector<WorkspaceItem_ *> workspaceItems_;
+    std::map<std::string, MediaFile> mediaFiles_;
 
-    QWidget *_containerWidget;
-    QVBoxLayout *_containerLayout;
+    QWidget *containerWidget_;
+    QVBoxLayout *containerLayout_;
 };
 
 // A single item in the workspace
-class Workspace::_WorkspaceItem : public QFrame {
+class Workspace::WorkspaceItem_ : public QFrame {
     Q_OBJECT
 
 public:
-    explicit _WorkspaceItem(MediaFile *file, QWidget *parent = nullptr);
-    void showCheckBox(bool flag) { _checkBox->setHidden(!flag); }
-    void resetCheckBox() { _checkBox->setCheckState(Qt::Unchecked); }
+    explicit WorkspaceItem_(MediaFile *file, QWidget *parent = nullptr);
+    void showCheckBox(const bool flag) const { checkBox_->setHidden(!flag); }
+    void resetCheckBox() const { checkBox_->setCheckState(Qt::Unchecked); }
 
 signals:
     void clicked(const std::string &filePath);
@@ -50,12 +48,12 @@ protected:
     void mousePressEvent(QMouseEvent *event) override;
 
 private:
-    const std::string _filePath;
-    Display *_display;
-    QLabel *_fileNameLabel;
-    QLabel *_framesLabel;
-    QLabel *_fileSizeLabel;
-    QCheckBox *_checkBox;
+    const std::string filePath_;
+    Display *display_;
+    QLabel *fileNameLabel_;
+    QLabel *framesLabel_;
+    QLabel *fileSizeLabel_;
+    QCheckBox *checkBox_;
 };
 
 #endif // WORKSPACE_H

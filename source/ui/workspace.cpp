@@ -7,21 +7,21 @@
 Workspace::Workspace(QWidget *parent)
     : QWidget(parent)
 {
-    auto mainLayout = new QVBoxLayout(this);
+    const auto mainLayout = new QVBoxLayout(this);
     mainLayout->setContentsMargins(0, 0, 0, 0);
 
-    auto scrollArea = new QScrollArea;
+    const auto scrollArea = new QScrollArea;
     scrollArea->setWidgetResizable(true);
     scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     scrollArea->setFrameStyle(QFrame::NoFrame);
 
-    _containerWidget = new QWidget;
-    _containerLayout = new QVBoxLayout(_containerWidget);
-    _containerLayout->setContentsMargins(0, 0, 0, 0);
-    _containerLayout->setAlignment(Qt::AlignTop);
+    containerWidget_ = new QWidget;
+    containerLayout_ = new QVBoxLayout(containerWidget_);
+    containerLayout_->setContentsMargins(0, 0, 0, 0);
+    containerLayout_->setAlignment(Qt::AlignTop);
 
-    _containerWidget->setLayout(_containerLayout);
-    scrollArea->setWidget(_containerWidget);
+    containerWidget_->setLayout(containerLayout_);
+    scrollArea->setWidget(containerWidget_);
 
     mainLayout->addWidget(scrollArea);
 }
@@ -32,64 +32,64 @@ bool Workspace::addItem(const std::string &path) {
         return false;
     }
 
-    auto [it, inserted] = _mediaFiles.emplace(path, std::move(file));
+    auto [it, inserted] = mediaFiles_.emplace(path, std::move(file));
     if (!inserted) {
         return false;
     }
 
-    auto *item = new _WorkspaceItem(&it->second, this);
-    _workspaceItems.emplace_back(item);
+    auto *item = new WorkspaceItem_(&it->second, this);
+    workspaceItems_.emplace_back(item);
 
-    _containerLayout->addWidget(item);
-    _containerWidget->update();
+    containerLayout_->addWidget(item);
+    containerWidget_->update();
 
-    connect(item, &_WorkspaceItem::clicked, this, [this](const std::string &filePath) {
-        emit itemClicked(&_mediaFiles.at(filePath));
+    connect(item, &WorkspaceItem_::clicked, this, [this](const std::string &filePath) {
+        emit itemClicked(&mediaFiles_.at(filePath));
     });
-    connect(item, &_WorkspaceItem::checked, this, [this](const std::string &filePath, bool flag) {
-        emit itemChecked(&_mediaFiles.at(filePath), flag);
+    connect(item, &WorkspaceItem_::checked, this, [this](const std::string &filePath, const bool flag) {
+        emit itemChecked(&mediaFiles_.at(filePath), flag);
     });
 
     return true;
 }
 
 void Workspace::clear() {
-    for (auto &itemPtr : _workspaceItems) {
-        _containerLayout->removeWidget(itemPtr);
+    for (const auto &itemPtr : workspaceItems_) {
+        containerLayout_->removeWidget(itemPtr);
         itemPtr->deleteLater();
     }
-    _workspaceItems.clear();
-    _mediaFiles.clear();
-    _containerWidget->update();
+    workspaceItems_.clear();
+    mediaFiles_.clear();
+    containerWidget_->update();
 }
 
-void Workspace::enableMultipleSelection(bool flag) {
-    for (auto item : _workspaceItems) {
+void Workspace::enableMultipleSelection(bool flag) const {
+    for (const auto item : workspaceItems_) {
         item->showCheckBox(flag);
     }
 }
 
-void Workspace::resetMultipleSelection() {
-    for (auto item : _workspaceItems) {
+void Workspace::resetMultipleSelection() const {
+    for (const auto item : workspaceItems_) {
         item->resetCheckBox();
     }
 }
 
-Workspace::_WorkspaceItem::_WorkspaceItem(MediaFile *file, QWidget *parent)
+Workspace::WorkspaceItem_::WorkspaceItem_(MediaFile *file, QWidget *parent)
     : QFrame(parent)
-    , _filePath(file->path())
+    , filePath_(file->path())
 {
     setFixedWidth(288);
 
-    _display = new Display(this);
-    _display->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    _display->setMinimumHeight(100);
-    _display->setMaximumHeight(100);
-    _display->show(file->matAtFrame(0), Qt::KeepAspectRatioByExpanding);
+    display_ = new Display(this);
+    display_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    display_->setMinimumHeight(100);
+    display_->setMaximumHeight(100);
+    display_->show(file->matAtFrame(0), Qt::KeepAspectRatioByExpanding);
 
-    _fileNameLabel = new QLabel(this);
-    _fileNameLabel->setText(QString::fromStdString(file->filename() + file->extension()));
-    _fileNameLabel->setAlignment(Qt::AlignCenter);
+    fileNameLabel_ = new QLabel(this);
+    fileNameLabel_->setText(QString::fromStdString(file->filename() + file->extension()));
+    fileNameLabel_->setAlignment(Qt::AlignCenter);
 
     QFileInfo fileInfo(QString::fromStdString(file->path()));
     qint64 size = fileInfo.size();
@@ -107,47 +107,40 @@ Workspace::_WorkspaceItem::_WorkspaceItem(MediaFile *file, QWidget *parent)
         sizeText = QString::number(size / (1024.0 * 1024 * 1024), 'f', 2) + " GB";
     }
 
-    _fileSizeLabel = new QLabel(this);
-    _fileSizeLabel->setText("Size: " + sizeText);
-    _fileSizeLabel->setAlignment(Qt::AlignLeft);
+    fileSizeLabel_ = new QLabel(this);
+    fileSizeLabel_->setText("Size: " + sizeText);
+    fileSizeLabel_->setAlignment(Qt::AlignLeft);
 
-    _framesLabel = new QLabel(this);
-    _framesLabel->setText("Frames: " + QString::number(file->frames()));
-    _framesLabel->setAlignment(Qt::AlignRight);
+    framesLabel_ = new QLabel(this);
+    framesLabel_->setText("Frames: " + QString::number(file->frames()));
+    framesLabel_->setAlignment(Qt::AlignRight);
 
     auto metadataLayout = new QHBoxLayout;
-    metadataLayout->addWidget(_fileSizeLabel);
-    metadataLayout->addWidget(_framesLabel);
+    metadataLayout->addWidget(fileSizeLabel_);
+    metadataLayout->addWidget(framesLabel_);
 
-    _checkBox = new QCheckBox(this);
-    _checkBox->setHidden(true); // Hide check box by default
-    _checkBox->setMinimumWidth(18);
-    _checkBox->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
-    connect(_checkBox, &QCheckBox::checkStateChanged, this, [this](Qt::CheckState state) {
-        emit checked(_filePath, state == Qt::Checked);
+    checkBox_ = new QCheckBox(this);
+    checkBox_->setHidden(true); // Hide check box by default
+    checkBox_->setMinimumWidth(18);
+    checkBox_->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
+    connect(checkBox_, &QCheckBox::checkStateChanged, this, [this](const Qt::CheckState state) {
+        emit checked(filePath_, state == Qt::Checked);
     });
 
-    auto layout = new QVBoxLayout;
-    layout->addWidget(_checkBox);
-    layout->addWidget(_display);
-    layout->addWidget(_fileNameLabel);
-    layout->addLayout(metadataLayout);
+    auto layout = new QGridLayout;
+
+    layout->addWidget(checkBox_, 0, 0, Qt::AlignTop);
+    layout->addWidget(display_, 0, 1, 1, 2);
+    layout->addWidget(fileNameLabel_, 1, 1, 1, 2);
+    layout->addWidget(fileSizeLabel_, 2, 1);
+    layout->addWidget(framesLabel_, 2, 2);
     layout->setContentsMargins(6, 6, 6, 6);
 
-    auto layout_ = new QGridLayout;
-
-    layout_->addWidget(_checkBox, 0, 0, Qt::AlignTop);
-    layout_->addWidget(_display, 0, 1, 1, 2);
-    layout_->addWidget(_fileNameLabel, 1, 1, 1, 2);
-    layout_->addWidget(_fileSizeLabel, 2, 1);
-    layout_->addWidget(_framesLabel, 2, 2);
-    layout_->setContentsMargins(6, 6, 6, 6);
-
-    setLayout(layout_);
-    setFrameShape(QFrame::StyledPanel);
+    setLayout(layout);
+    setFrameShape(StyledPanel);
 }
 
-void Workspace::_WorkspaceItem::mousePressEvent(QMouseEvent *event) {
-    emit clicked(_filePath);
+void Workspace::WorkspaceItem_::mousePressEvent(QMouseEvent *event) {
+    emit clicked(filePath_);
     QFrame::mousePressEvent(event);
 }
