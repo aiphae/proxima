@@ -14,8 +14,8 @@ public:
     explicit MediaViewer(QWidget *parent = nullptr);
     void show(const std::variant<MediaFile *, MediaCollection> &source,
               const std::optional<std::vector<int>> &map = std::nullopt,
-              const ModifyingFunction & = nullptr);
-    void setModifyingFunction(const ModifyingFunction &);
+              ModifyingFunction func = {});
+    void setModifyingFunction(ModifyingFunction);
     void clear();
 
 private:

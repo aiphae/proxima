@@ -7,7 +7,7 @@
 // If the rectangle extends beyond the frame boundaries, out-of-bounds areas
 // are filled with black.
 //
-cv::Mat Frame::centerObject(cv::Mat frame, int width, int height) {
+cv::Mat Frame::centerObject(const cv::Mat &frame, int width, int height) {
     cv::Mat processed;
     cv::cvtColor(frame, processed, cv::COLOR_BGR2GRAY);
 
@@ -60,7 +60,7 @@ cv::Mat Frame::centerObject(cv::Mat frame, int width, int height) {
 //
 // Fills new borders with black.
 //
-cv::Mat Frame::expandBorders(cv::Mat frame, int width, int height) {
+cv::Mat Frame::expandBorders(const cv::Mat &frame, int width, int height) {
     int top = std::max(0, (height - frame.rows) / 2);
     int bottom = std::max(0, height - frame.rows - top);
     int left = std::max(0, (width - frame.cols) / 2);
@@ -79,7 +79,7 @@ cv::Mat Frame::expandBorders(cv::Mat frame, int width, int height) {
 // where higher values indicate sharper, more detailed images, and lower
 // values suggest blurring.
 //
-double Frame::estimateQuality(cv::Mat frame) {
+double Frame::estimateQuality(const cv::Mat &frame) {
     // Convert to gray
     cv::Mat gray;
     if (frame.channels() == 3) {

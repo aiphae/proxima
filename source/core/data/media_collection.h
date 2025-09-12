@@ -10,7 +10,7 @@ public:
 
     cv::Mat matAtFrame(int frame);
     std::vector<cv::Mat> matsAtFrames(std::vector<int> &frames) { return {}; }
-    bool allDimensionsEqual() const { return true; }
+    bool allDimensionsEqual() const;
     int totalFrames() const { return _totalFrames; }
     int fileCount() const { return static_cast<int>(_files.size()); }
 

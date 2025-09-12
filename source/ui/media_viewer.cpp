@@ -1,5 +1,6 @@
 #include "media_viewer.h"
 #include <QVBoxLayout>
+#include <utility>
 
 MediaViewer::MediaViewer(QWidget *parent)
     : QWidget{parent}
@@ -21,7 +22,7 @@ MediaViewer::MediaViewer(QWidget *parent)
 
 void MediaViewer::show(const std::variant<MediaFile *, MediaCollection> &source,
                        const std::optional<std::vector<int>> &map,
-                       const ModifyingFunction &func) {
+                       ModifyingFunction func) {
     source_ = source;
     if (map.has_value()) {
         map_ = map.value();
@@ -74,7 +75,7 @@ void MediaViewer::showFrame_(const int frame) {
     display_->show(mat);
 }
 
-void MediaViewer::setModifyingFunction(const ModifyingFunction &func) {
-    func_ = func;
+void MediaViewer::setModifyingFunction(ModifyingFunction func) {
+    func_ = std::move(func);
     showFrame_(currentFrame_);
 }

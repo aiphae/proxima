@@ -1,6 +1,7 @@
 #include "alignment.h"
+#include <QDebug>
 
-cv::Point2f computeShift(cv::Mat reference, cv::Mat target, double confidence) {
+cv::Point2f computeShift(const cv::Mat &reference, const cv::Mat &target, double confidence) {
     // Ensure input images are 32F grayscale
     cv::Mat refGray, tgtGray;
     if (reference.channels() > 1) {
@@ -20,7 +21,7 @@ cv::Point2f computeShift(cv::Mat reference, cv::Mat target, double confidence) {
     refGray.convertTo(refGray, CV_32F);
     tgtGray.convertTo(tgtGray, CV_32F);
 
-    // Apply Hanning window to both images
+    // Apply a Hanning window to both images
     cv::Mat hann;
     cv::createHanningWindow(hann, refGray.size(), CV_32F);
     refGray = refGray.mul(hann);
@@ -33,10 +34,10 @@ cv::Point2f computeShift(cv::Mat reference, cv::Mat target, double confidence) {
 
     // Check if the response is strong enough
     if (response < confidence) {
-        return cv::Point2f(0, 0);
+        return {0.0, 0.0};
     }
 
-    return cv::Point2f(static_cast<float>(shift.x), static_cast<float>(shift.y));
+    return {static_cast<float>(shift.x), static_cast<float>(shift.y)};
 }
 
 //
@@ -88,7 +89,7 @@ AlignmentPointSet AlignmentPointSet::estimate(cv::Mat frame, Config config) {
         const int step = config.size / 2;
 
         // Create mask of the largest contour
-        cv::Mat mask = cv::Mat::zeros(frame.size(), CV_8UC1);
+        cv::Mat mask = cv::Mat::zeros(processed.size(), CV_8UC1);
         cv::drawContours(mask, contours, largestContour(contours), 255, cv::FILLED);
 
         // Erode the mask so the points aren't placed too close to the edges

@@ -1,17 +1,17 @@
-#ifndef _STACK_THREAD_H
-#define _STACK_THREAD_H
+#ifndef STACK_THREAD_H
+#define STACK_THREAD_H
 
 #include "threading/thread.h"
 #include "data/media_collection.h"
 #include "stacking/stacker.h"
 
-class _StackThread : public Thread {
+class StackThread : public Thread {
     Q_OBJECT
 
 public:
-    explicit _StackThread(
-        MediaCollection &collection,
-        _StackConfig &config,
+    explicit StackThread(
+        MediaCollection &files,
+        StackConfig &config,
         std::array<int, 4> &percentages,
         std::vector<std::pair<int, double>> &frameQualities,
         std::string &outputDir,
@@ -19,21 +19,24 @@ public:
     );
 
 signals:
-    void statusUpdated(QString);
-    void frameProcessed(QString);
-    void finished(const std::vector<std::string> &);
+    void frameProcessed(const QString &);
+    void singleStackCompleted(const std::string &);
+    void finished();
 
 protected:
     void run() override;
 
 private:
-    MediaCollection &_collection;
-    _StackConfig &_config;
-    std::array<int, 4> &_percentages;
-    std::vector<std::pair<int, double>> &_frameQualities;
-    std::string &_outputDir;
+    // Store references to:
+    MediaCollection &files_;
+    std::vector<std::pair<int, double>> &frameQualities_;
 
-    Stacker _stacker;
+    // Store copies of:
+    StackConfig config_;
+    std::array<int, 4> percentages_;
+    std::string outputDir_;
+
+    Stacker stacker_;
 };
 
 #endif // STACK_THREAD_H

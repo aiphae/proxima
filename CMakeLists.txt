@@ -38,7 +38,6 @@ set(SOURCES
         source/core/stacking/stacker.h
         source/core/stacking/stacker.cpp
         source/threading/thread.h
-        source/threading/thread_pool.h
         source/threading/stack_thread.h
         source/threading/stack_thread.cpp
         source/threading/analysis_thread.h
@@ -49,7 +48,6 @@ set(SOURCES
         source/ui/media_viewer.cpp
         source/ui/dialogs/stacking_dialog/stack_dialog.h
         source/ui/dialogs/stacking_dialog/stack_dialog.cpp
-        source/ui/dialogs/stacking_dialog/stacking_dialog.ui
         source/ui/widgets/main_window/main_window.h
         source/ui/widgets/main_window/main_window.cpp
 )

@@ -3,28 +3,40 @@
 
 #include <QMainWindow>
 #include "data/media_file.h"
-#include "stacking_dialog/stacking_dialog.h"
-
-namespace Ui {
-class MainWindow;
-}
+#include "stacking_dialog/stack_dialog.h"
+#include "ui/workspace.h"
+#include "ui/media_viewer.h"
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
 
 public:
     MainWindow(QWidget *parent = nullptr);
-    ~MainWindow();
+    ~MainWindow() override = default;
 
 private:
-    Ui::MainWindow *ui;
-    void _connectUI();
-    void _setupUI();
+    void setupUI_();
+    void connectUI_();
 
-    MediaFile *_currentFile;
-    void _showFile();
+    MediaFile *currentFile_ = nullptr;
+    void showFile_();
 
-    StackingDialog *_initializeStackingDialog();
+    StackDialog *initializeStackDialog_();
+
+    // UI elements
+    QFrame *workspaceFrame_;
+    QFrame *displayFrame_;
+    QFrame *toolsFrame_;
+
+    Workspace *workspace_;
+    MediaViewer *mediaViewer_;
+
+    QLabel *totalFilesEdit_;
+
+    QPushButton *addItemsPushButton_;
+    QPushButton *clearWorkspacePushButton_;
+    QPushButton *stackingPushButton_;
+    QPushButton *saveButton_;
 };
 
 #endif // MAIN_WINDOW_H

@@ -3,12 +3,13 @@
 
 #include "threading/thread.h"
 #include "data/media_collection.h"
+#include <QObject>
 
-class AnalyzeThread : public Thread {
+class AnalysisThread : public Thread {
     Q_OBJECT
 
 public:
-    explicit AnalyzeThread(
+    explicit AnalysisThread(
         MediaCollection &files,
         std::vector<std::pair<int, double>> &output,
         QObject *parent = nullptr
@@ -22,8 +23,8 @@ protected:
     void run() override;
 
 private:
-    MediaCollection &_files;
-    std::vector<std::pair<int, double>> &_output;
+    MediaCollection &files_;
+    std::vector<std::pair<int, double>> &output_;
 };
 
 #endif // ANALYZE_THREAD_H

@@ -25,3 +25,18 @@ cv::Mat MediaCollection::matAtFrame(int frame) {
     }
     return {};
 }
+
+bool MediaCollection::allDimensionsEqual() const {
+    if (_files.empty()) {
+        return true;
+    }
+
+    const auto dimensions = _files[0]->dimensions();
+    for (const auto file : _files) {
+        if (file->dimensions() != dimensions) {
+            return false;
+        }
+    }
+
+    return true;
+}
